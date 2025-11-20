@@ -1,0 +1,3752 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Your daily dose of delicious snacks and drinks with modern ordering experience">
+    <meta name="keywords" content="snacks, drinks, food delivery, cafe, ordering">
+    <meta name="author" content="Maricafe">
+    <meta name="theme-color" content="#1e293b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Maricafe">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-TileColor" content="#1e293b">
+    <meta name="msapplication-config" content="/browserconfig.xml">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫖</text></svg>">
+    <link rel="apple-touch-icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192' fill='%23f1f5f9'><circle cx='96' cy='96' r='88' fill='%231e293b'/><text x='96' y='120' font-family='Arial, sans-serif' font-size='120' text-anchor='middle' fill='%23f1f5f9'>🫖</text></svg>">
+    <link rel="manifest" href="/manifest.json">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <!-- Tailwind Play CDN (quick styling) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#f97316',
+                        accent: '#fb923c',
+                        secondary: '#1e293b'
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary-color: #f97316;
+            --secondary-color: #1e293b;
+            --accent-color: #fb923c;
+            --text-color: #1f2937;
+            --light-bg: #f9fafb;
+            --card-bg: #ffffff;
+            --shadow-light: 0 2px 8px rgba(0, 0, 0, .1);
+            --shadow-hover: 0 4px 16px rgba(0, 0, 0, .15);
+            --transition-duration: .3s;
+            --notification-height: 35px;
+            --bottom-nav-height: 65px;
+            --border-radius: 12px;
+            --border-radius-large: 16px;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+            --info-color: #3b82f6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--light-bg);
+            padding-top: var(--notification-height);
+            padding-bottom: var(--bottom-nav-height);
+        }
+
+        #top-notification {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: var(--notification-height);
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-color));
+            color: white;
+            text-align: center;
+            line-height: var(--notification-height);
+            font-size: .9em;
+            font-weight: 600;
+            z-index: 1100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(37, 211, 102, .3);
+        }
+
+        #notification-close {
+            position: absolute;
+            right: 15px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1.2em;
+            line-height: var(--notification-height);
+            padding: 0 5px;
+            transition: color var(--transition-duration);
+        }
+
+        #notification-close:hover {
+            color: #dcf8c6;
+        }
+
+        .notification-hidden body {
+            padding-top: 0;
+        }
+
+        /* Fullscreen modal variations */
+        .modal-content.fullscreen {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+            border-radius: 0 !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+        }
+
+        /* Checkout progress overlay */
+        #checkout-progress {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #checkout-progress.active { display: flex; }
+
+        #checkout-progress .progress-card {
+            background: var(--card-bg);
+            padding: 20px;
+            width: 90%;
+            max-width: 520px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-light);
+            text-align: center;
+        }
+
+        #checkout-progress .progress-bar {
+            height: 12px;
+            background: #e6e6e6;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        #checkout-progress .progress-bar > div {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            transition: width 0.15s linear;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            padding: 16px 5%;
+            box-shadow: var(--shadow-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .logo {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--primary-color);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #user-greeting {
+            font-size: 1em;
+            font-weight: 500;
+            color: #666;
+            transition: color .3s;
+        }
+
+        .nav-links a {
+            color: var(--text-color);
+            text-decoration: none;
+            margin-left: 20px;
+            font-weight: 500;
+            transition: color var(--transition-duration), transform var(--transition-duration);
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: var(--border-radius);
+            background: #f8f9fa;
+        }
+
+        .nav-links a i {
+            font-size: 1.5em;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-color);
+            transform: scale(1.02);
+            background: #e3f2fd;
+        }
+
+        .cart-icon {
+            position: relative;
+            cursor: pointer;
+            font-size: 1.5em;
+            padding: 8px;
+            border-radius: 50%;
+            background: #f8f9fa;
+            transition: transform var(--transition-duration), background var(--transition-duration);
+            display: none;
+        }
+
+        .cart-icon:hover {
+            background: #e3f2fd;
+            transform: scale(1.05);
+        }
+
+        #cart-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #ff4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: .7em;
+            font-weight: 700;
+            min-width: 18px;
+            text-align: center;
+            border: 2px solid white;
+        }
+
+        main {
+            padding: 0 5%;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        #bottom-nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: var(--bottom-nav-height);
+            background-color: var(--card-bg);
+            box-shadow: 0 -2px 16px rgba(0, 0, 0, .1);
+            z-index: 1050;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .bottom-nav-link {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #666;
+            font-size: .8em;
+            font-weight: 600;
+            padding: 8px 0;
+            transition: color var(--transition-duration), transform var(--transition-duration);
+            border-radius: 8px;
+        }
+
+        .bottom-nav-link i {
+            font-size: 1.8em;
+            margin-bottom: 2px;
+        }
+
+        .bottom-nav-link:hover,
+        .bottom-nav-link.active {
+            color: var(--primary-color);
+            transform: translateY(-2px);
+            background: #f0f2f5;
+        }
+
+        .bottom-cart-wrapper {
+            position: relative;
+            padding: 0 10px;
+        }
+
+        #inbox-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #ff4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: .7em;
+            font-weight: 700;
+            min-width: 18px;
+            text-align: center;
+            border: 2px solid white;
+        }
+
+        #inbox-count.hidden {
+            display: none;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, var(--primary-color), #20b954);
+            color: white;
+            padding: 60px 20px;
+            border-radius: 0;
+            text-align: center;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="60" cy="80" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+        }
+
+        .hero h1 {
+            font-size: 2.8em;
+            margin-bottom: 16px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, .2);
+        }
+
+        .hero p {
+            font-size: 1.3em;
+            margin-bottom: 24px;
+            font-weight: 400;
+            opacity: .9;
+        }
+
+        .hero-actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+
+        .hero-action-link {
+            padding: 14px 28px;
+            text-decoration: none;
+            border-radius: var(--border-radius-large);
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all var(--transition-duration);
+            border: 2px solid rgba(255, 255, 255, .2);
+            backdrop-filter: blur(10px);
+        }
+
+        .order-call-button {
+            background: rgba(255, 255, 255, .2);
+            color: white;
+        }
+
+        .order-call-button:hover {
+            background: rgba(255, 255, 255, .3);
+            transform: translateY(-2px);
+        }
+
+        .chat-whatsapp-button {
+            background: white;
+            color: var(--primary-color);
+        }
+
+        .chat-whatsapp-button:hover {
+            background: #f8f9fa;
+            transform: translateY(-2px);
+        }
+
+        .shop-button {
+            background: linear-gradient(135deg, var(--primary-color), #20b954);
+            color: white;
+            padding: 14px 28px;
+            text-decoration: none;
+            border-radius: var(--border-radius-large);
+            font-weight: 600;
+            display: inline-block;
+            transition: all var(--transition-duration);
+            border: none;
+            cursor: pointer;
+        }
+
+        .shop-button:hover {
+            background: linear-gradient(135deg, #20b954, #25d366);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 211, 102, .3);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 2.2em;
+            color: var(--text-color);
+            font-weight: 700;
+        }
+
+        #category-sections {
+            padding: 0;
+            margin-left: 0;
+            width: 100%;
+        }
+
+        .category-section {
+            margin-bottom: 32px;
+        }
+
+        .category-title {
+            font-size: 1.6em;
+            color: var(--text-color);
+            margin-bottom: 16px;
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 8px;
+            display: inline-block;
+            margin-left: 20px;
+            font-weight: 600;
+        }
+
+        .product-scroll-container {
+            display: flex;
+            overflow-x: scroll;
+            padding: 0 20px 20px 20px;
+            gap: 16px;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .product-scroll-container::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .product-scroll-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(90deg, var(--primary-color), #20b954);
+            border-radius: 3px;
+        }
+
+        .product-card {
+            min-width: 200px;
+            max-width: 200px;
+            scroll-snap-align: start;
+            flex-shrink: 0;
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius-large);
+            box-shadow: var(--shadow-light);
+            overflow: hidden;
+            text-align: center;
+            padding-bottom: 16px;
+            transition: all var(--transition-duration);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 1px solid #e5e7eb;
+        }
+
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--primary-color);
+        }
+
+        .product-card img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            display: block;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .product-info {
+            padding: 16px 16px 8px 16px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .product-info h3 {
+            font-size: 1.1em;
+            margin-bottom: 8px;
+            color: var(--text-color);
+            font-weight: 600;
+            line-height: 1.3;
+        }
+
+        .product-info p {
+            display: none;
+        }
+
+        .price {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 12px;
+        }
+
+        .product-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .action-btn-group {
+            display: flex;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .add-to-cart {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 700;
+            transition: all var(--transition-duration);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            height: 40px;
+            box-shadow: 0 2px 6px rgba(59, 130, 246, .2);
+        }
+
+        .add-to-cart:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, .3);
+        }
+
+        .add-to-cart:active {
+            transform: translateY(0);
+        }
+
+        .buy-now {
+            background: linear-gradient(135deg, var(--primary-color), #ea580c);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all var(--transition-duration);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            flex: 1;
+            min-height: 40px;
+            box-shadow: 0 2px 6px rgba(249, 115, 22, .2);
+        }
+
+        .buy-now:hover {
+            background: linear-gradient(135deg, #ea580c, #dc2626);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, .3);
+        }
+
+        .buy-now:active {
+            transform: translateY(0);
+        }
+
+        .share-btn {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: all var(--transition-duration);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            height: 40px;
+            box-shadow: 0 2px 6px rgba(139, 92, 246, .2);
+        }
+
+        .share-btn:hover {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, .3);
+        }
+
+        .share-btn:active {
+            transform: translateY(0);
+        }
+
+        .buy-now i,
+        .add-to-cart i,
+        .share-btn i {
+            font-size: 1.1em;
+        }
+
+        .discount-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 700;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        .original-price {
+            text-decoration: line-through;
+            color: #94a3b8;
+            font-size: 0.9em;
+            margin-right: 4px;
+        }
+
+        footer {
+            background: linear-gradient(135deg, var(--accent-color), #128c7e);
+            color: white;
+            padding: 32px 5% 80px 5%;
+            margin-top: 32px;
+            font-size: .9em;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            border-radius: var(--border-radius-large) var(--border-radius-large) 0 0;
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            max-width: 1000px;
+            padding-bottom: 24px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, .1);
+        }
+
+        .contact-section,
+        .social-section {
+            width: 45%;
+            min-width: 280px;
+            max-width: 400px;
+        }
+
+        .contact-section h4 {
+            font-size: 1.5em;
+            color: #dcf8c6;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        #contact-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        #contact-form input,
+        #contact-form textarea {
+            padding: 14px;
+            border: none;
+            border-radius: var(--border-radius);
+            background-color: rgba(255, 255, 255, .1);
+            color: white;
+            font-size: 1em;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, .2);
+        }
+
+        #contact-form input::placeholder,
+        #contact-form textarea::placeholder {
+            color: rgba(255, 255, 255, .7);
+        }
+
+        #contact-form input:focus,
+        #contact-form textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: rgba(255, 255, 255, .15);
+        }
+
+        .profile-form-group label {
+            display: block;
+            text-align: left;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: white;
+        }
+
+        #profile-form input {
+            width: 100%;
+        }
+
+        #contact-form textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        #contact-form button {
+            background: linear-gradient(135deg, var(--primary-color), #20b954);
+            color: white;
+            padding: 14px;
+            font-weight: 600;
+            border-radius: var(--border-radius);
+            transition: all var(--transition-duration);
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        #contact-form button:hover {
+            background: linear-gradient(135deg, #20b954, #25d366);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 211, 102, .3);
+        }
+
+        #contact-message {
+            margin-top: 12px;
+            font-weight: 600;
+            color: #dcf8c6;
+        }
+
+        .social-icons {
+            display: flex;
+            gap: 24px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .social-icons a {
+            color: white;
+            font-size: 1.8em;
+            transition: all var(--transition-duration);
+            padding: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .1);
+        }
+
+        .social-icons a:hover {
+            color: var(--primary-color);
+            transform: scale(1.1);
+            background: white;
+        }
+
+        .footer-copy {
+            padding-top: 16px;
+            color: rgba(255, 255, 255, .8);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, .5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background-color: var(--card-bg);
+            padding: 32px;
+            border-radius: var(--border-radius-large);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, .15);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            transform: scale(.95);
+            opacity: 0;
+            transition: all .3s ease-in-out;
+            border: 1px solid #e5e7eb;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #666;
+            line-height: 1;
+            padding: 8px;
+            border-radius: 50%;
+            background: #f8f9fa;
+            transition: all var(--transition-duration);
+        }
+
+        .modal-close:hover {
+            color: var(--primary-color);
+            background: #e3f2fd;
+            transform: scale(1.1);
+        }
+
+        .message-box {
+            text-align: center;
+            padding: 16px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: 1px solid #10b981;
+            color: white;
+            border-radius: var(--border-radius);
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+
+        .message-box.error {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            border: 1px solid #ef4444;
+            color: white;
+        }
+
+        #cart-modal .modal-content {
+            width: 100%;
+            max-width: 380px;
+            height: 100%;
+            position: fixed;
+            top: 0;
+            right: 0;
+            border-radius: 0;
+            padding: 24px;
+            transform: translateX(100%);
+            opacity: 1;
+            transition: transform .3s ease-out;
+            border-left: 1px solid #e5e7eb;
+        }
+
+        #cart-modal.active .modal-content {
+            transform: translateX(0);
+        }
+
+        #cart-modal.active {
+            display: block;
+            background-color: rgba(0, 0, 0, .4);
+            backdrop-filter: blur(4px);
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e7eb;
+            gap: 10px;
+        }
+
+        .cart-item-details {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .cart-item-details h4 {
+            font-size: 0.95em;
+            margin: 0;
+            color: var(--text-color);
+            font-weight: 600;
+        }
+
+        .cart-item-details p {
+            font-size: 0.85em;
+            color: #666;
+            margin: 3px 0 0 0;
+        }
+
+        .cart-item-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #f9f9f9;
+        }
+
+        .quantity-control button {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-weight: bold;
+            color: var(--primary-color);
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .quantity-control button:hover {
+            background: #f0f0f0;
+        }
+
+        .quantity-control input {
+            width: 35px;
+            border: none;
+            text-align: center;
+            font-weight: 600;
+            background: transparent;
+            font-size: 0.9em;
+        }
+
+        .cart-item-price {
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1em;
+            white-space: nowrap;
+            min-width: 70px;
+            text-align: right;
+        }
+
+        .cart-item-remove {
+            background: #fee;
+            color: #ef4444;
+            border: none;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cart-item-remove:hover {
+            background: #fdd;
+            transform: scale(1.05);
+        }
+
+        #cart-items-list {
+            max-height: calc(100vh - 220px);
+            overflow-y: auto;
+        }
+        /* Discount and clear cart styles */
+        .discount-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        #cart-discount-code {
+            flex: 1;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            background: white;
+        }
+
+        #cart-apply-discount {
+            padding: 8px 12px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #cart-clear-btn {
+            background: transparent;
+            color: #ef4444;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .cart-summary {
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 2px solid var(--primary-color);
+            background: #f8f9fa;
+            border-radius: var(--border-radius);
+            padding: 20px;
+        }
+
+        .cart-summary div {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-color);
+        }
+
+        .cart-checkout {
+            margin-top: 16px;
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary-color), #20b954);
+            color: white;
+            border-radius: var(--border-radius);
+            padding: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .cart-checkout:hover {
+            background: linear-gradient(135deg, #20b954, #25d366);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 211, 102, .3);
+        }
+
+        .payment-option {
+            border: 1px solid #e5e7eb;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all .2s;
+            background: white;
+        }
+
+        .payment-option:hover {
+            background: #f8f9fa;
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
+        }
+
+        .payment-option h4 {
+            margin-top: 0;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .payment-option p {
+            font-size: .9em;
+            color: #666;
+            margin: 4px 0;
+        }
+
+        .payment-option-details {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .payment-option-details i {
+            font-size: 2.5em;
+            color: var(--primary-color);
+        }
+
+        .payment-option.selected {
+            border-color: var(--primary-color);
+            border-width: 2px;
+            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+            box-shadow: 0 4px 12px rgba(37, 211, 102, .2);
+        }
+
+        .final-checkout-button {
+            background: linear-gradient(135deg, var(--primary-color), #20b954);
+            color: white;
+            width: 100%;
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .final-checkout-button:hover {
+            background: linear-gradient(135deg, #20b954, #25d366);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(37, 211, 102, .3);
+        }
+
+        .payment-input-group {
+            margin-bottom: 16px;
+        }
+
+        .payment-input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-color);
+            font-size: 1em;
+        }
+
+        .payment-input-group input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: var(--border-radius);
+            background-color: white;
+            color: var(--text-color);
+            font-size: 1em;
+            transition: border-color var(--transition-duration);
+        }
+
+        .payment-input-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(37, 211, 102, .1);
+        }
+
+        #side-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, .4);
+            z-index: 3000;
+            display: none;
+            opacity: 0;
+            transition: opacity .3s ease-in-out;
+            backdrop-filter: blur(4px);
+        }
+
+        #side-menu.active {
+            display: block;
+            opacity: 1;
+        }
+
+        #side-menu-drawer {
+            width: 320px;
+            max-width: 85%;
+            height: 100%;
+            background-color: var(--card-bg);
+            padding: 24px;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, .15);
+            transform: translateX(-100%);
+            transition: transform .3s ease-in-out;
+            display: flex;
+            flex-direction: column;
+            border-radius: 0 var(--border-radius-large) var(--border-radius-large) 0;
+        }
+
+        #side-menu.active #side-menu-drawer {
+            transform: translateX(0);
+        }
+
+        .side-menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .side-menu-link {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: var(--text-color);
+            padding: 16px 12px;
+            margin-bottom: 8px;
+            border-radius: var(--border-radius);
+            transition: all .2s;
+            font-weight: 500;
+            background: #f8f9fa;
+        }
+
+        .side-menu-link:hover {
+            background: linear-gradient(135deg, var(--primary-color), #20b954);
+            color: white;
+            transform: translateX(4px);
+        }
+
+        .side-menu-link i {
+            margin-right: 16px;
+            font-size: 1.8em;
+            color: var(--primary-color);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding-top: var(--notification-height);
+            }
+
+            .notification-hidden body {
+                padding-top: 0;
+            }
+
+            header {
+                flex-wrap: wrap;
+                justify-content: space-around;
+                padding: 12px 5%;
+            }
+
+            .logo {
+                width: 100%;
+                justify-content: center;
+                margin-bottom: 12px;
+            }
+
+            #user-greeting {
+                display: none;
+            }
+
+            .nav-links {
+                margin-top: 12px;
+                order: 3;
+                width: 100%;
+                display: flex;
+                justify-content: flex-end;
+                padding-top: 8px;
+            }
+
+            .nav-links a {
+                margin-left: 12px;
+                font-size: .9em;
+                padding: 6px 10px;
+            }
+
+            .logo,
+            .cart-icon {
+                margin: 0 10px;
+            }
+
+            .hero-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .hero-action-link {
+                width: 85%;
+                margin-bottom: 12px;
+                padding: 12px 20px;
+            }
+
+            .hero h1 {
+                font-size: 2.4em;
+            }
+
+            .hero p {
+                font-size: 1.1em;
+            }
+
+            .category-title {
+                margin-left: 20px;
+            }
+
+            .product-scroll-container {
+                padding: 0 20px 20px 20px;
+                gap: 12px;
+            }
+
+            #cart-modal .modal-content {
+                max-width: 100%;
+                padding: 20px;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                gap: 32px;
+            }
+
+            .contact-section,
+            .social-section {
+                width: 100%;
+            }
+        }
+
+        /* Chat / WhatsApp-like styles */
+        .chat-container {
+            padding: 12px;
+            max-height: 60vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .chat-row {
+            display: flex;
+        }
+
+        .chat-row.align-end {
+            justify-content: flex-end;
+        }
+
+        .chat-bubble {
+            max-width: 75%;
+            padding: 10px 12px;
+            border-radius: 16px;
+            background: #fff;
+            box-shadow: var(--shadow-light);
+            font-size: 0.95rem;
+            color: #111827;
+            position: relative;
+        }
+
+        .chat-bubble.user {
+            background: linear-gradient(135deg, #dcf8c6, #bbf7d0);
+            /* WhatsApp green for sent messages */
+            border-bottom-right-radius: 4px;
+            text-align: right;
+            border: 1px solid #16a34a;
+            margin-left: auto;
+        }
+
+        .chat-bubble.admin {
+            background: linear-gradient(135deg, #ffffff, #f8fafc);
+            border-bottom-left-radius: 4px;
+            text-align: left;
+            border: 1px solid #e5e7eb;
+            margin-right: auto;
+        }
+
+        .chat-bubble.admin.direct-message {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 1px solid #f59e0b;
+        }
+
+        .chat-meta {
+            margin-top: 6px;
+            font-size: 0.75rem;
+            color: #6b7280;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .chat-reply {
+            background: linear-gradient(135deg, var(--primary-color), #ea580c);
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            transition: all var(--transition-duration);
+            box-shadow: 0 2px 4px rgba(249, 115, 22, 0.2);
+        }
+
+        .chat-reply:hover {
+            background: linear-gradient(135deg, #ea580c, #dc2626);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(249, 115, 22, 0.3);
+        }
+
+        .small-action {
+            min-width: 36px;
+            height: 36px;
+            padding: 0 8px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: #f1f5f9;
+            border: 1px solid #e6e9ee;
+            cursor: pointer;
+        }
+
+        /* Sending indicator styles */
+        .chat-sending-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8rem;
+            color: #9ca3af;
+            margin-left: 8px;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid #e5e7eb;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .chat-bubble.sending {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- LOGIN MODAL -->
+    <div id="login-modal" class="modal-overlay active">
+        <div class="modal-content bg-white rounded-lg shadow-2xl p-6 max-w-sm">
+            <h3 class="text-primary text-xl font-bold mb-4">🔐 Login to Maricafe</h3>
+            <div id="login-message-container"></div>
+            <form id="login-form">
+                <div class="profile-form-group mb-4">
+                    <label for="login-pin" class="block font-semibold text-gray-700 mb-2">Enter Your 4-Digit PIN</label>
+                    <input type="password" id="login-pin" maxlength="4" required class="w-full border border-gray-300 rounded px-3 py-3 text-center text-2xl font-bold">
+                </div>
+                <button type="submit" class="shop-button bg-secondary text-white w-full py-3 px-4 rounded font-semibold hover:bg-opacity-90 transition">Login</button>
+            </form>
+            <p class="text-xs text-gray-400 mt-4 text-center">Don't have an account? <a href="#" onclick="showRegisterModal()" class="text-accent hover:underline font-semibold">Register here</a></p>
+        </div>
+    </div>
+
+    <!-- REGISTER MODAL -->
+    <div id="register-modal" class="modal-overlay">
+        <div class="modal-content bg-white rounded-lg shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <span class="modal-close absolute top-4 right-4 text-2xl cursor-pointer text-gray-500 hover:text-gray-700" onclick="closeModal('register-modal')">&times;</span>
+            <h3 class="text-primary text-xl font-bold mb-4 flex items-center gap-2 px-6 pt-6">
+                <i class="material-icons">edit</i>Create Account
+            </h3>
+            <div id="register-message-container" class="px-6"></div>
+            <form id="register-form" class="px-6 pb-6 overflow-y-auto flex-1">
+                <div class="profile-form-group mb-4">
+                    <label for="register-name" class="block font-semibold text-gray-700 mb-2">Full Name</label>
+                    <input type="text" id="register-name" required class="w-full border border-gray-300 rounded px-3 py-2">
+                </div>
+                <div class="profile-form-group mb-4">
+                    <label for="register-email" class="block font-semibold text-gray-700 mb-2">Email Address</label>
+                    <input type="email" id="register-email" required class="w-full border border-gray-300 rounded px-3 py-2">
+                </div>
+                <div class="profile-form-group mb-4">
+                    <label for="register-location" class="block font-semibold text-gray-700 mb-2">City/Location</label>
+                    <input type="text" id="register-location" class="w-full border border-gray-300 rounded px-3 py-2">
+                </div>
+                <div class="profile-form-group mb-6">
+                    <label for="register-pin" class="block font-semibold text-gray-700 mb-2">Create 4-Digit PIN</label>
+                    <input type="password" id="register-pin" maxlength="4" required class="w-full border border-gray-300 rounded px-3 py-3 text-center text-2xl font-bold">
+                </div>
+                <button type="submit" class="shop-button bg-secondary text-white w-full py-3 px-4 rounded font-semibold hover:bg-opacity-90 transition">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="top-notification" class="fixed top-0 left-0 w-full h-9 bg-primary text-white flex items-center justify-center z-50 px-4">
+        🚨 Limited Time Offer: Get 10% off your first order with code SNACK10!
+        <span id="notification-close" title="Dismiss" class="ml-4 ml-auto cursor-pointer font-bold">&times;</span>
+    </div>
+    <header class="bg-white shadow-sm py-4 px-6 flex items-center justify-between">
+        <a href="#" class="logo flex items-center gap-3 text-primary font-bold text-lg">
+            <i class="material-icons text-2xl">local_cafe</i>
+            <span>Maricafe</span>
+            <span id="user-greeting" class="ml-2 text-sm text-gray-600">Welcome to Maricafe!</span>
+        </a>
+        <div id="menu-toggle" class="nav-links text-2xl text-gray-700" onclick="openSideMenu()">
+            <i class="material-icons">menu</i>
+        </div>
+    </header>
+    <main class="pt-8 pb-24">
+        <section class="hero relative px-4 py-12 bg-gradient-to-r from-primary to-accent text-white rounded-lg mx-4 mb-8">
+            <h1 class="text-4xl font-bold mb-4">Your Daily Dose of Deliciousness!</h1>
+            <p class="text-lg mb-6">From sweet treats to savory crisps, find your perfect bite today.</p>
+            <div class="hero-actions flex flex-col gap-4">
+                <a href="tel:+256744759181" class="hero-action-link order-call-button flex items-center justify-center gap-2 bg-white text-primary font-semibold py-3 px-6 rounded-lg hover:bg-gray-100 transition">
+                    <i class="material-icons">phone</i>
+                    <span>Order a Snack (Call)</span>
+                </a>
+                <a href="https://wa.me/256744759181" target="_blank" class="hero-action-link chat-whatsapp-button flex items-center justify-center gap-2 bg-white text-primary font-semibold py-3 px-6 rounded-lg hover:bg-gray-100 transition">
+                    <i class="material-icons">chat</i>
+                    <span>Chat with Us (WhatsApp)</span>
+                </a>
+            </div>
+        </section>
+        <section id="products">
+            <h2>Explore Our Categories</h2>
+            <div id="category-sections"></div>
+        </section>
+    </main>
+    <footer class="bg-secondary text-white mt-12 pt-8 pb-4">
+        <div class="footer-content px-4 py-8 max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="contact-section">
+                <h4 class="text-xl font-bold mb-4">Get in Touch</h4>
+                <form id="contact-form" class="flex flex-col gap-3">
+                    <input type="text" name="name" placeholder="Your Name" required class="bg-slate-700 text-white placeholder-gray-400 border border-gray-600 rounded px-3 py-2 focus:outline-none focus:border-primary">
+                    <input type="email" name="email" placeholder="Your Email" required class="bg-slate-700 text-white placeholder-gray-400 border border-gray-600 rounded px-3 py-2 focus:outline-none focus:border-primary">
+                    <textarea name="message" placeholder="Your Message" required class="bg-slate-700 text-white placeholder-gray-400 border border-gray-600 rounded px-3 py-2 focus:outline-none focus:border-primary resize-none h-24"></textarea>
+                    <button type="submit" class="shop-button bg-primary text-white font-semibold py-2 px-4 rounded hover:bg-accent transition">Send Message</button>
+                    <div id="contact-message"></div>
+                </form>
+            </div>
+            <div class="social-section">
+                <h4 class="text-xl font-bold mb-4">Connect With Us</h4>
+                <div class="social-icons flex gap-4 text-2xl mb-4">
+                    <a href="#" title="Facebook" class="text-white hover:text-primary transition"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" title="Instagram" class="text-white hover:text-primary transition"><i class="fab fa-instagram"></i></a>
+                    <a href="#" title="Twitter/X" class="text-white hover:text-primary transition"><i class="fab fa-twitter"></i></a>
+                    <a href="#" title="TikTok" class="text-white hover:text-primary transition"><i class="fab fa-tiktok"></i></a>
+                </div>
+                <p class="text-sm text-gray-300">Follow us on social media for the latest snack drops and exclusive offers!</p>
+            </div>
+        </div>
+        <div class="footer-copy bg-slate-900 text-gray-400 text-center py-4 text-sm">&copy; 2025 Maricafe. Connected to Database.</div>
+    </footer>
+
+    <!-- ABOUT MODAL -->
+    <div id="about-modal" class="modal-overlay">
+        <div class="modal-content bg-white rounded-lg shadow-2xl">
+            <span class="modal-close absolute top-4 right-4 text-2xl cursor-pointer text-gray-500 hover:text-gray-700" onclick="closeModal('about-modal')">&times;</span>
+            <h3 class="text-primary text-xl font-bold mb-4">About Maricafe</h3>
+            <p class="text-gray-700 mb-3">Maricafe was founded in 2025 with a simple mission: to curate the most delicious, crave-worthy snacks from around the world and deliver them right to your door. We believe snacking should be an experience, not an afterthought.</p>
+            <p class="text-gray-700">We focus on quality ingredients, unique flavors, and finding that perfect balance between healthy and indulgent. Enjoy your stay!</p>
+        </div>
+    </div>
+
+    <!-- PROFILE MODAL -->
+    <div id="profile-modal" class="modal-overlay">
+        <div class="modal-content bg-white rounded-lg shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <span class="modal-close absolute top-4 right-4 text-2xl cursor-pointer text-gray-500 hover:text-gray-700" onclick="closeModal('profile-modal')">&times;</span>
+            <h3 class="text-primary text-xl font-bold mb-4 flex items-center gap-2 px-6 pt-6">
+                <i class="material-icons">person</i>My Account Profile
+            </h3>
+            <div id="profile-message-container" class="px-6"></div>
+            
+            <!-- Profile Picture -->
+            <div id="profile-pic-container" class="text-center mb-6 px-6">
+                <img id="profile-pic-preview" src="https://placehold.co/100x100/475569/f1f5f9?text=Profile" class="w-24 h-24 rounded-full object-cover border-4 border-accent mx-auto">
+                <input type="file" id="profile-pic-file" accept="image/*" class="mt-3 block text-sm text-gray-600">
+            </div>
+
+            <!-- Profile Form -->
+            <form id="profile-form" class="px-6 pb-6 overflow-y-auto flex-1">
+                <div class="profile-form-group mb-4">
+                    <label for="profile-name" class="block font-semibold text-gray-700 mb-2">Full Name (Required)</label>
+                    <input type="text" id="profile-name" required class="w-full border border-gray-300 rounded px-3 py-2">
+                </div>
+                <div class="profile-form-group mb-4">
+                    <label for="profile-email" class="block font-semibold text-gray-700 mb-2">Email Address</label>
+                    <input type="email" id="profile-email" class="w-full border border-gray-300 rounded px-3 py-2">
+                </div>
+                <div class="profile-form-group mb-6">
+                    <label for="profile-location" class="block font-semibold text-gray-700 mb-2">City/Location</label>
+                    <input type="text" id="profile-location" class="w-full border border-gray-300 rounded px-3 py-2">
+                </div>
+                <button type="submit" class="shop-button bg-secondary text-white w-full py-3 px-4 rounded font-semibold hover:bg-opacity-90 transition">Save Profile</button>
+            </form>
+            <p class="text-xs text-gray-400 px-6 pb-4">*Profile data is saved to your account.</p>
+        </div>
+    </div>
+
+    <div id="cart-modal" class="modal-overlay">
+        <div class="modal-content bg-white rounded-lg shadow-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <span class="modal-close absolute top-4 right-4 text-2xl cursor-pointer text-gray-500 hover:text-gray-700" onclick="closeModal('cart-modal')">&times;</span>
+            <h3 class="text-primary text-xl font-bold mb-4 flex items-center gap-2 px-6 pt-6">
+                <i class="material-icons">shopping_cart</i>
+                Shopping Cart
+            </h3>
+            <div id="cart-message-container" class="px-6"></div>
+
+            <!-- Cart Items Section -->
+            <div id="cart-items-section" class="max-h-96 overflow-y-auto mb-4 px-6 flex-1">
+                <div id="cart-items-list"></div>
+            </div>
+
+            <!-- Empty Cart Message -->
+            <div id="cart-empty-message" class="text-center text-gray-400 py-10 px-6 hidden">
+                <i class="material-icons text-5xl text-gray-500 mb-4 block">shopping_cart</i>
+                <h4 class="mb-2 text-gray-700 font-semibold">Your cart is empty</h4>
+                <p class="text-sm">Add some delicious snacks to get started!</p>
+            </div>
+
+            <!-- Cart Summary -->
+            <div id="cart-summary-section" class="hidden px-6 pb-6 border-t border-gray-200 pt-4">
+                <div class="mb-4">
+                    <div class="flex justify-between mb-2 font-medium text-gray-700">
+                        <span>Subtotal:</span>
+                        <span id="cart-subtotal">$0.00</span>
+                    </div>
+                    <div class="flex justify-between mb-2 font-medium text-gray-700">
+                        <span>Discount:</span>
+                        <span id="cart-discount" class="text-green-500">-$0.00</span>
+                    </div>
+                    <div class="flex justify-between mb-2 font-medium text-gray-700">
+                        <span>Tax:</span>
+                        <span id="cart-tax">$0.00</span>
+                    </div>
+                    <div class="flex justify-between text-lg font-bold text-primary pt-2 border-t border-gray-200">
+                        <span>Total:</span>
+                        <span id="cart-total">$0.00</span>
+                    </div>
+                </div>
+
+                <div class="discount-row flex gap-2 mb-4">
+                    <input id="cart-discount-code" type="text" placeholder="Discount code (e.g. SAVE10)" class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm">
+                    <button id="cart-apply-discount" class="bg-primary text-white px-4 py-2 rounded font-medium hover:bg-accent transition">Apply</button>
+                </div>
+
+                <div class="flex gap-2 items-center">
+                    <button id="cart-clear-btn" class="bg-gray-300 text-gray-700 px-4 py-2 rounded font-medium hover:bg-gray-400 transition" title="Clear cart">Clear Cart</button>
+                    <div class="flex-1 flex gap-2">
+                        <button class="shop-button flex-1 bg-slate-500 text-white py-2 px-4 rounded font-medium hover:bg-slate-600 transition" onclick="closeModal('cart-modal')">Continue Shopping</button>
+                        <button class="shop-button cart-checkout flex-1 bg-primary text-white py-2 px-4 rounded font-medium hover:bg-accent transition" onclick="Cart.proceedToCheckout()">Checkout</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="payment-modal" class="modal-overlay">
+        <div class="modal-content bg-white rounded-lg shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <span class="modal-close absolute top-4 right-4 text-2xl cursor-pointer text-gray-500 hover:text-gray-700" onclick="closeModal('payment-modal')">&times;</span>
+            <h3 class="text-primary text-xl font-bold mb-4 px-6 pt-6">💰 Complete Your Payment</h3>
+            <div class="message-box bg-blue-50 border border-blue-300 rounded px-4 py-3 mx-6 mb-4 text-gray-700 text-sm">
+                Total Amount Due: <strong id="payment-due-amount">$0.00</strong>
+            </div>
+            <p class="px-6 mb-4 font-medium text-gray-700">Select a payment method:</p>
+            <div id="payment-options-container" class="px-6 mb-4 flex-1 overflow-y-auto">
+                <div class="payment-option bg-gray-50 border border-gray-300 rounded-lg p-4 mb-3 cursor-pointer hover:bg-gray-100 transition" data-method="mtn" onclick="selectPayment('mtn')">
+                    <div class="payment-option-details flex gap-3">
+                        <i class="material-icons text-yellow-500">smartphone</i>
+                        <div>
+                            <h4 class="font-semibold text-gray-700">MTN Mobile Money</h4>
+                            <p class="text-sm text-gray-600">Pay instantly via your MTN MoMo account.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="payment-option bg-gray-50 border border-gray-300 rounded-lg p-4 mb-3 cursor-pointer hover:bg-gray-100 transition" data-method="airtel" onclick="selectPayment('airtel')">
+                    <div class="payment-option-details flex gap-3">
+                        <i class="material-icons text-red-600">phone_android</i>
+                        <div>
+                            <h4 class="font-semibold text-gray-700">Airtel Money</h4>
+                            <p class="text-sm text-gray-600">Fast and secure payment via Airtel Money.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="payment-option bg-gray-50 border border-gray-300 rounded-lg p-4 mb-3 cursor-pointer hover:bg-gray-100 transition" data-method="marzpay" onclick="selectPayment('marzpay')">
+                    <div class="payment-option-details flex gap-3">
+                        <i class="material-icons text-green-600">credit_card</i>
+                        <div>
+                            <h4 class="font-semibold text-gray-700">MarzPay</h4>
+                            <p class="text-sm text-gray-600">Secure payment processing for cards and wallets.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="payment-option bg-gray-50 border border-gray-300 rounded-lg p-4 mb-3 cursor-pointer hover:bg-gray-100 transition" data-method="cod" onclick="selectPayment('cod')">
+                    <div class="payment-option-details flex gap-3">
+                        <i class="material-icons text-blue-600">attach_money</i>
+                        <div>
+                            <h4 class="font-semibold text-gray-700">Cash on Delivery (COD)</h4>
+                            <p class="text-sm text-gray-600">Pay when your order arrives. (3% Surcharge applies)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="payment-details-form" class="px-6 mb-4"></div>
+            <div id="payment-message-container" class="px-6 mb-4"></div>
+            <button class="shop-button final-checkout-button bg-primary text-white font-semibold py-3 px-6 rounded-lg hover:bg-accent transition disabled:opacity-50 disabled:cursor-not-allowed mx-6 mb-6 w-[calc(100%-48px)]" onclick="confirmPayment()" disabled>Pay Now</button>
+        </div>
+    </div>
+
+    <!-- Checkout Progress Overlay -->
+    <div id="checkout-progress">
+        <div class="progress-card">
+            <h3 class="text-primary text-lg font-semibold mb-1">Preparing Checkout</h3>
+            <div id="progress-percent" class="text-xl font-bold">0%</div>
+            <div class="progress-bar" aria-hidden="true"><div id="progress-fill"></div></div>
+            <p class="mt-3 text-sm text-gray-500">Please wait while we prepare your payment...</p>
+        </div>
+    </div>
+
+    <!-- INBOX MODAL -->
+    <div id="inbox-modal" class="modal-overlay">
+        <div class="modal-content bg-white rounded-lg shadow-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <span class="modal-close absolute top-4 right-4 text-2xl cursor-pointer text-gray-500 hover:text-gray-700" onclick="closeModal('inbox-modal')">&times;</span>
+            <h3 class="text-primary text-xl font-bold mb-4 flex items-center gap-2 px-6 pt-6">
+                <i class="material-icons">mail</i>My Inbox
+            </h3>
+            <div id="inbox-message-container" class="px-6"></div>
+            <div id="inbox-messages-list" class="space-y-4 max-h-96 overflow-y-auto px-6 flex-1">
+                <!-- Messages will be loaded here -->
+            </div>
+            <div id="inbox-empty-state" class="text-center text-gray-400 py-10 px-6 hidden">
+                <i class="material-icons text-5xl text-gray-500 mb-4 block">mail_outline</i>
+                <h4 class="mb-2 text-gray-700 font-semibold">No messages yet</h4>
+                <p class="text-sm">Your inbox is empty. Messages from Maricafe will appear here.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content bg-white rounded-lg shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <span class="modal-close absolute top-4 right-4 text-2xl cursor-pointer text-gray-500 hover:text-gray-700" onclick="closeModal('settings-modal')">&times;</span>
+            <h3 class="text-primary text-xl font-bold mb-4 flex items-center gap-2 px-6 pt-6">
+                <i class="material-icons">settings</i>App Settings
+            </h3>
+
+            <div class="px-6 pb-6 overflow-y-auto flex-1">
+                <div class="flex flex-col gap-4">
+                    <div>
+                        <label for="setting-theme" class="font-semibold text-gray-700 block mb-2">Theme</label>
+                        <select id="setting-theme" class="w-full border border-gray-300 rounded px-3 py-2">
+                            <option value="system">System</option>
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="setting-primary-color" class="font-semibold text-gray-700 block mb-2">Primary Color</label>
+                        <input id="setting-primary-color" type="color" value="#f97316" class="w-14 h-10">
+                    </div>
+
+                    <div>
+                        <label for="setting-currency" class="font-semibold text-gray-700 block mb-2">Currency</label>
+                        <div class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-50 text-gray-700 font-semibold">UGX - Uganda Shillings</div>
+                    </div>
+
+                    <div>
+                        <label class="font-semibold text-gray-700 block mb-2">Notifications</label>
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" id="setting-notifications" class="rounded">
+                            <span class="text-gray-700">Enable push & in-app notifications</span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <label class="font-semibold text-gray-700 block mb-2">PWA</label>
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" id="setting-pwa" class="rounded">
+                            <span class="text-gray-700">Show install prompt</span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <label for="setting-admin-pin" class="font-semibold text-gray-700 block mb-2">Admin PIN</label>
+                        <input id="setting-admin-pin" type="password" placeholder="Enter admin PIN" class="w-full border border-gray-300 rounded px-3 py-2">
+                    </div>
+
+                    <details class="p-3 border border-gray-300 rounded bg-gray-50">
+                        <summary class="font-semibold text-gray-700 cursor-pointer">Advanced: Payment & API overrides</summary>
+                        <div class="flex flex-col gap-3 mt-4">
+                            <div>
+                                <label for="setting-payment-key" class="font-semibold text-gray-700 block mb-2">Payment API Key</label>
+                                <input id="setting-payment-key" type="text" placeholder="API Key" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label for="setting-payment-secret" class="font-semibold text-gray-700 block mb-2">Payment API Secret</label>
+                                <input id="setting-payment-secret" type="text" placeholder="API Secret" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label for="setting-payment-auth" class="font-semibold text-gray-700 block mb-2">Payment Auth Header (Base64)</label>
+                                <input id="setting-payment-auth" type="text" placeholder="Authorization header" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label for="setting-payment-base" class="font-semibold text-gray-700 block mb-2">Payment Base URL</label>
+                                <input id="setting-payment-base" type="text" placeholder="https://api.example.com" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                            </div>
+                            <div>
+                                <label for="setting-api-base" class="font-semibold text-gray-700 block mb-2">API Base URL Override</label>
+                                <input id="setting-api-base" type="text" placeholder="/api" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                            </div>
+                        </div>
+                    </details>
+
+                    <div class="flex gap-3 justify-end mt-4 pt-4 border-t border-gray-200">
+                        <button class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded font-medium hover:bg-gray-50 transition" onclick="closeModal('settings-modal')">Cancel</button>
+                        <button class="bg-primary text-white px-4 py-2 rounded font-medium hover:bg-accent transition" onclick="saveSettings()">Save Settings</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="side-menu" class="modal-overlay" onclick="if (event.target.id === 'side-menu') closeSideMenu()">
+        <div id="side-menu-drawer" class="fixed left-0 top-0 h-screen w-64 bg-white shadow-xl flex flex-col z-50">
+            <div class="side-menu-header flex justify-between items-center px-6 py-4 border-b border-gray-200">
+                <a href="#" class="logo text-xl font-bold text-primary flex items-center gap-2">
+                    <i class="material-icons">local_cafe</i>Menu
+                </a>
+                <i class="material-icons cursor-pointer text-gray-600 hover:text-gray-800" onclick="closeSideMenu()">close</i>
+            </div>
+
+            <a href="#" class="side-menu-link flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 transition border-b border-gray-100"
+                id="side-menu-profile" onclick="closeSideMenu(); openModal('profile-modal'); loadUserProfile();">
+                <i class="material-icons">person</i>
+                <span>My Profile</span>
+            </a>
+
+            <a href="#" class="side-menu-link flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 transition border-b border-gray-100"
+                id="side-menu-about" onclick="closeSideMenu(); openModal('about-modal');">
+                <i class="material-icons">info</i>
+                <span>About Maricafe</span>
+            </a>
+
+            <a href="#" class="side-menu-link flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 transition border-b border-gray-100"
+                id="side-menu-settings" onclick="closeSideMenu(); openModal('settings-modal'); loadSettings();">
+                <i class="material-icons">settings</i>
+                <span>Settings</span>
+            </a>
+
+            <a href="#footer" class="side-menu-link flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-100 transition border-b border-gray-100" onclick="closeSideMenu()">
+                <i class="material-icons">mail</i>
+                <span>Contact Us</span>
+            </a>
+
+            <div class="mt-auto pt-4 border-t border-gray-200 pb-4">
+                <p class="text-xs text-gray-500 text-center">App Version 1.2.1</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="bottom-nav-bar" class="fixed bottom-0 left-0 w-full h-16 bg-white shadow-md flex justify-around items-center z-40">
+        <a href="#" class="flex flex-col items-center text-gray-700 text-sm" id="bottom-shop-link"
+            onclick="document.getElementById('products').scrollIntoView({ behavior: 'smooth' });">
+            <i class="material-icons">storefront</i>
+            <span>Shop</span>
+        </a>
+        <a href="#" class="flex flex-col items-center text-gray-700 text-sm" id="bottom-inbox-btn">
+            <div class="relative">
+                <i class="material-icons">mail</i>
+                <span id="inbox-count" class="hidden absolute -top-2 -right-3 bg-red-500 text-white text-xs rounded-full px-1">0</span>
+            </div>
+            <span>Inbox</span>
+        </a>
+        <a href="#" class="flex flex-col items-center text-gray-700 text-sm" id="bottom-profile-btn">
+            <i class="material-icons">person</i>
+            <span>Profile</span>
+        </a>
+        <a href="#" class="flex flex-col items-center text-gray-700 text-sm" id="bottom-cart-link">
+            <div class="relative">
+                <i class="material-icons">shopping_cart</i>
+                <span id="cart-count" class="absolute -top-2 -right-3 bg-primary text-white text-xs rounded-full px-1">0</span>
+            </div>
+            <span>Cart</span>
+        </a>
+    </div>
+
+    <script src="actionBtn.js"></script>
+    <script>
+        // Global variables
+        let products = [];
+        let currentUser = null;
+        let finalPaymentAmount = 0;
+        // Use same-origin relative API base so the frontend uses the server port (e.g., 5505)
+        const API_BASE = '/api';
+        let isOnline = navigator.onLine;
+        let db = null; // IndexedDB for offline storage
+        let userMessages = [];
+
+        const finalCheckoutButton = document.querySelector('.final-checkout-button');
+        const paymentDueAmountElement = document.getElementById('payment-due-amount');
+        const paymentOptionsContainer = document.getElementById('payment-options-container');
+        const aboutButton = document.getElementById('side-menu-about');
+        const profileButton = document.getElementById('bottom-profile-btn');
+        const profileForm = document.getElementById('profile-form');
+        const cartIcon = document.getElementById('bottom-cart-link');
+        const notificationBar = document.getElementById('top-notification');
+        const notificationClose = document.getElementById('notification-close');
+        const contactForm = document.getElementById('contact-form');
+        const contactMessage = document.getElementById('contact-message');
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+
+        let synth = null;
+        let notificationSynth = null;
+        let audioContextStarted = false;
+        let selectedPaymentMethod = null;
+        let socket = null;
+        // When true, after successful login the UI should open the payment modal
+        let pendingCheckout = false;
+
+        // Audio functions
+        function initializeAudio() {
+            if (synth === null) {
+                synth = new Tone.Synth({
+                    oscillator: { type: "sine" },
+                    envelope: { attack: .005, decay: .1, sustain: .05, release: .5 }
+                }).toDestination();
+                notificationSynth = new Tone.Synth({
+                    oscillator: { type: "square" },
+                    envelope: { attack: .001, decay: .05, sustain: .05, release: .3 }
+                }).toDestination();
+            }
+        }
+
+        async function playCartSound() {
+            try {
+                if (!audioContextStarted) {
+                    await Tone.start();
+                    audioContextStarted = true;
+                }
+                if (synth) {
+                    synth.triggerAttackRelease("C6", "16n");
+                }
+            } catch (error) {
+                console.error("Error starting or playing cart audio:", error);
+            }
+        }
+
+        async function playNotificationSound() {
+            try {
+                if (!audioContextStarted) {
+                    await Tone.start();
+                    audioContextStarted = true;
+                }
+                if (notificationSynth) {
+                    notificationSynth.triggerAttackRelease("G5", "32n");
+                }
+            } catch (error) {
+                console.error("Error starting or playing notification audio:", error);
+            }
+        }
+
+        // Modal functions
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            // If closing the payment modal, remove fullscreen class
+            if (modalId === 'payment-modal') {
+                const el = document.querySelector('#payment-modal .modal-content');
+                if (el) el.classList.remove('fullscreen');
+            }
+        }
+
+        function openSideMenu() {
+            document.getElementById('side-menu').classList.add('active');
+        }
+
+        function closeSideMenu() {
+            document.getElementById('side-menu').classList.remove('active');
+        }
+
+        function showMessageBox(message, type, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = `<div class="message-box ${type}">${message}</div>`;
+            playNotificationSound();
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 3000);
+        }
+
+        // Authentication functions
+        async function login(pin) {
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    currentUser = data;
+                    window.currentUser = data; // Make globally accessible
+                    closeModal('login-modal');
+                    updateGreeting();
+                    await loadProducts();
+                    await loadUserMessages();
+                    renderProducts();
+                    // Join user room for real-time notifications
+                    if (socket) {
+                        socket.emit('join-user', data.id);
+                    }
+                    showMessageBox('Welcome back, ' + data.name + '!', 'success', 'top-notification');
+                    
+                    // Refresh user cart from database
+                    if (window.refreshUserCart) {
+                        window.refreshUserCart(data);
+                    }
+                    
+                    // If the user was prompted to login at checkout, continue to payment
+                    if (pendingCheckout) {
+                        pendingCheckout = false;
+                        // Ensure cart totals and UI are up to date then open payment modal
+                        if (Cart) Cart.render();
+                        openPaymentModal();
+                    }
+                } else {
+                    throw new Error(data.error || 'Login failed');
+                }
+            } catch (error) {
+                showMessageBox(error.message, 'error', 'login-message-container');
+            }
+        }
+
+        async function register(userData) {
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    closeModal('register-modal');
+                    showMessageBox('Account created successfully! Please login with your PIN.', 'success', 'top-notification');
+                    document.getElementById('register-form').reset();
+                } else {
+                    throw new Error(data.error || 'Registration failed');
+                }
+            } catch (error) {
+                showMessageBox(error.message, 'error', 'register-message-container');
+            }
+        }
+
+        function showRegisterModal() {
+            closeModal('login-modal');
+            openModal('register-modal');
+        }
+
+        function updateGreeting() {
+            const greetingEl = document.getElementById('user-greeting');
+            if (currentUser && currentUser.name) {
+                greetingEl.innerHTML = `Welcome back, <strong>${currentUser.name.split(' ')[0]}</strong>!`;
+            } else {
+                greetingEl.innerText = 'Welcome to Maricafe!';
+            }
+        }
+
+        // Socket.IO functions
+        function initializeSocket() {
+            // Connect to the Socket.IO server on the same origin (no hard-coded host/port)
+            socket = io();
+
+            socket.on('connect', () => {
+                console.log('Connected to server with Socket.IO');
+                if (currentUser) {
+                    socket.emit('join-user', currentUser.id);
+                }
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Disconnected from server');
+            });
+
+            socket.on('new-message', (messageData) => {
+                console.log('New message received:', messageData);
+                // Refresh messages if inbox is open
+                if (currentUser) {
+                    loadUserMessages();
+                }
+                // Show notification
+                showMessageBox(`New message from ${messageData.fromUserId === 'admin' ? 'Maricafe' : 'Support'}`, 'info', 'top-notification');
+                playNotificationSound();
+            });
+
+            socket.on('snack-notification', (notificationData) => {
+                console.log('Snack notification:', notificationData);
+                showMessageBox(notificationData.message, 'success', 'top-notification');
+                playNotificationSound();
+
+                // Refresh products list
+                loadProducts().then(() => {
+                    renderProducts();
+                });
+            });
+
+            socket.on('order-status-update', (orderData) => {
+                console.log('Order status update:', orderData);
+                showMessageBox(`Order ${orderData.id} status: ${orderData.status}`, 'info', 'top-notification');
+                playNotificationSound();
+            });
+        }
+
+        function sendMessageViaSocket(fromUserId, toUserId, subject, content, type = 'message') {
+            if (socket && socket.connected) {
+                socket.emit('send-message', {
+                    fromUserId,
+                    toUserId,
+                    subject,
+                    content,
+                    type
+                });
+            } else {
+                console.error('Socket not connected');
+                // Fallback to HTTP API
+                sendMessageViaAPI(fromUserId, toUserId, subject, content, type);
+            }
+        }
+
+        async function sendMessageViaAPI(fromUserId, toUserId, subject, content, type = 'message') {
+            try {
+                await postData('messages', {
+                    fromUserId,
+                    toUserId,
+                    subject,
+                    content,
+                    type
+                });
+                showMessageBox('Message sent successfully!', 'success', 'inbox-message-container');
+            } catch (error) {
+                console.error('Error sending message:', error);
+                showMessageBox('Error sending message.', 'error', 'inbox-message-container');
+            }
+        }
+
+        // Product functions
+        async function loadProducts() {
+            try {
+                const response = await fetch(`${API_BASE}/snacks`);
+                products = await response.json();
+                window.products = products; // Make globally available for actionBtn.js
+            } catch (error) {
+                console.error('Error loading products:', error);
+                products = [];
+                window.products = products;
+            }
+        }
+
+        function renderProducts() {
+            const categorizedProducts = products.reduce((acc, product) => {
+                const category = product.category || 'Uncategorized';
+                if (!acc[category]) {
+                    acc[category] = [];
+                }
+                acc[category].push(product);
+                return acc;
+            }, {});
+
+            const categorySectionsContainer = document.getElementById('category-sections');
+            let html = '';
+
+            for (const category in categorizedProducts) {
+                const categoryProducts = categorizedProducts[category];
+                const productsHtml = categoryProducts.map(product => {
+                    const hasDiscount = product.discount && product.discount > 0;
+                    const discountedPrice = hasDiscount ? product.price * (1 - product.discount / 100) : product.price;
+                    const productId = String(product.id).replace(/"/g, '"').replace(/'/g, "'");
+                    const productName = String(product.name).replace(/"/g, '"').replace(/'/g, "'");
+
+                    return '<div class="product-card bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden">' +
+                        (hasDiscount ? '<div class="discount-badge absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">-' + product.discount + '% OFF</div>' : '') +
+                        '<img src="' + (product.imageUrl || 'https://placehold.co/400x200/475569/f1f5f9?text=Snack') + '" alt="' + product.name + '" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src=\'https://placehold.co/400x200/475569/f1f5f9?text=Snack\'">' +
+                        '<div class="product-info p-4 flex flex-col justify-between">' +
+                        '<div><h3 class="font-bold text-lg text-gray-800">' + product.name + '</h3>' +
+                        '<p class="text-sm text-gray-600 mt-2">' + (product.description || '') + '</p></div>' +
+                        '<div class="card-bottom mt-4"><div class="price mb-3">' +
+                        (hasDiscount ? '<span class="original-price line-through text-gray-400 text-sm">UGX ' + product.price.toFixed(2) + '</span> ' : '') +
+                        '<span class="text-primary font-bold text-lg">UGX ' + discountedPrice.toFixed(2) + '</span></div>' +
+                        '<div class="product-actions flex gap-2">' +
+                        '<button class="buy-now flex-1 bg-primary text-white py-2 px-3 rounded-lg hover:bg-accent transition flex items-center justify-center gap-2 font-semibold" data-id="' + productId + '" data-name="' + productName + '" title="Buy Now">' +
+                        '<i class="material-icons text-sm">shopping_bag</i><span class="hidden sm:inline">Buy Now</span></button>' +
+                        '<button class="share-btn bg-gray-200 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-300 transition" data-product-id="' + productId + '" title="Share Product">' +
+                        '<i class="material-icons text-sm">share</i></button></div></div></div></div>';
+                }).join('');
+
+                const categoryHtml = '<div class="category-section"><h3 class="category-title">' + category + '</h3>' +
+                    '<div class="product-scroll-container" id="list-' + category.replace(/\s+/g, '-').toLowerCase() + '">' +
+                    productsHtml + '</div></div>';
+                html += categoryHtml;
+            }
+
+            if (categorySectionsContainer) {
+                categorySectionsContainer.innerHTML = html;
+            }
+
+            // Initialize action button event listeners
+            setTimeout(() => {
+                if (window.initActionButtons) {
+                    window.initActionButtons();
+                }
+            }, 100);
+        }
+
+        // --- SHOPPING CART SYSTEM ---
+        class ShoppingCart {
+            constructor() {
+                this.items = [];
+                this.discountCode = '';
+                this.currentUser = null;
+                this.initialized = false;
+            }
+
+            // Initialize cart for the current user
+            async initialize(user) {
+                this.currentUser = user;
+                if (user && user.id && !user.id.startsWith('guest_')) {
+                    await this.loadFromDatabase();
+                } else {
+                    this.loadFromLocalStorage();
+                }
+                this.initialized = true;
+                this.updateCartCount();
+                this.render();
+            }
+
+            // Load cart from database
+            async loadFromDatabase() {
+                if (!this.currentUser || !this.currentUser.id) return;
+                
+                try {
+                    const response = await fetch(`${API_BASE}/cart/${this.currentUser.id}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.items = data.items || [];
+                        this.discountCode = data.discountCode || '';
+                    } else {
+                        this.items = [];
+                        this.discountCode = '';
+                    }
+                } catch (error) {
+                    console.error('Error loading cart from database:', error);
+                    this.items = [];
+                    this.discountCode = '';
+                }
+            }
+
+            // Load cart from localStorage as fallback
+            loadFromLocalStorage() {
+                const saved = localStorage.getItem('maricafe_cart');
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        this.items = data.items || [];
+                        this.discountCode = data.discountCode || '';
+                    } catch (e) {
+                        this.items = [];
+                        this.discountCode = '';
+                    }
+                }
+            }
+
+            // Save cart to database
+            async saveToDatabase() {
+                if (!this.currentUser || !this.currentUser.id || this.currentUser.id.startsWith('guest_')) {
+                    this.saveToLocalStorage();
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`${API_BASE}/cart/${this.currentUser.id}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            items: this.items,
+                            discountCode: this.discountCode
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        this.updateCartCount();
+                    }
+                } catch (error) {
+                    console.error('Error saving cart to database:', error);
+                    this.saveToLocalStorage();
+                }
+            }
+
+            // Save cart to localStorage
+            saveToLocalStorage() {
+                localStorage.setItem('maricafe_cart', JSON.stringify({
+                    items: this.items,
+                    discountCode: this.discountCode
+                }));
+                this.updateCartCount();
+            }
+
+            // Add item to cart
+            addItem(product, quantity = 1) {
+                const existingItem = this.items.find(item => item.id === product.id);
+                
+                if (existingItem) {
+                    existingItem.quantity += quantity;
+                } else {
+                    this.items.push({
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        quantity: quantity,
+                        image: product.imageUrl || 'https://placehold.co/400x200/475569/f1f5f9?text=Snack'
+                    });
+                }
+                
+                this.saveToDatabase();
+                this.render();
+                showMessageBox(`${product.name} added to cart!`, 'success', 'top-notification');
+            }
+
+            // Remove item from cart
+            removeItem(productId) {
+                this.items = this.items.filter(item => item.id !== productId);
+                this.saveToDatabase();
+                this.render();
+            }
+
+            // Update item quantity
+            updateQuantity(productId, quantity) {
+                const item = this.items.find(item => item.id === productId);
+                if (item) {
+                    if (quantity <= 0) {
+                        this.removeItem(productId);
+                    } else {
+                        item.quantity = quantity;
+                        this.saveToDatabase();
+                        this.render();
+                    }
+                }
+            }
+
+            // Clear cart
+            async clear() {
+                this.items = [];
+                this.discountCode = '';
+                
+                if (this.currentUser && this.currentUser.id && !this.currentUser.id.startsWith('guest_')) {
+                    try {
+                        await fetch(`${API_BASE}/cart/${this.currentUser.id}`, {
+                            method: 'DELETE'
+                        });
+                    } catch (error) {
+                        console.error('Error clearing cart from database:', error);
+                    }
+                }
+                
+                this.saveToLocalStorage();
+                this.render();
+            }
+
+            // Apply discount code
+            applyDiscount(code) {
+                this.discountCode = code.toUpperCase().trim();
+                this.saveToDatabase();
+                this.render();
+            }
+
+            // Get cart totals
+            getTotals() {
+                const subtotal = this.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                let discount = 0;
+                
+                // Apply discount codes
+                if (this.discountCode === 'SNACK10') {
+                    discount = subtotal * 0.10;
+                } else if (this.discountCode === 'SAVE5') {
+                    discount = 5.00;
+                }
+                
+                const tax = (subtotal - discount) * 0.08;
+                const total = subtotal - discount + tax;
+                
+                return {
+                    subtotal: subtotal,
+                    discount: discount,
+                    tax: tax,
+                    total: Math.max(0, total)
+                };
+            }
+
+            // Get checkout data
+            getCheckoutData() {
+                const totals = this.getTotals();
+                return {
+                    items: this.items,
+                    subtotal: totals.subtotal,
+                    discount: totals.discount,
+                    tax: totals.tax,
+                    total: totals.total
+                };
+            }
+
+            // Update cart count display
+            updateCartCount() {
+                const count = this.items.reduce((sum, item) => sum + item.quantity, 0);
+                const cartCountElements = document.querySelectorAll('#cart-count');
+                cartCountElements.forEach(element => {
+                    element.textContent = count;
+                });
+            }
+
+            // Render cart modal
+            render() {
+                const cartItemsList = document.getElementById('cart-items-list');
+                const cartEmptyMessage = document.getElementById('cart-empty-message');
+                const cartSummarySection = document.getElementById('cart-summary-section');
+                const cartSubtotal = document.getElementById('cart-subtotal');
+                const cartDiscount = document.getElementById('cart-discount');
+                const cartTax = document.getElementById('cart-tax');
+                const cartTotal = document.getElementById('cart-total');
+                
+                if (!cartItemsList) return;
+
+                if (this.items.length === 0) {
+                    if (cartEmptyMessage) cartEmptyMessage.classList.remove('hidden');
+                    if (cartSummarySection) cartSummarySection.classList.add('hidden');
+                    cartItemsList.innerHTML = '';
+                    return;
+                }
+
+                if (cartEmptyMessage) cartEmptyMessage.classList.add('hidden');
+                if (cartSummarySection) cartSummarySection.classList.remove('hidden');
+
+                // Render cart items
+                cartItemsList.innerHTML = this.items.map(item => `
+                    <div class="cart-item bg-white border border-gray-200 rounded-lg p-4 flex justify-between items-center hover:shadow-md transition">
+                        <div class="cart-item-details flex-1">
+                            <h4 class="font-semibold text-gray-800">${item.name}</h4>
+                            <p class="text-sm text-gray-600">$${item.price.toFixed(2)} each</p>
+                        </div>
+                        <div class="cart-item-controls flex items-center gap-3">
+                            <div class="quantity-control flex border border-gray-300 rounded overflow-hidden">
+                                <button class="bg-gray-100 text-gray-700 px-2 py-1 hover:bg-gray-200 transition" onclick="window.Cart.updateQuantity('${item.id}', ${item.quantity - 1})">−</button>
+                                <input type="text" class="w-10 text-center border-0" value="${item.quantity}" readonly>
+                                <button class="bg-gray-100 text-gray-700 px-2 py-1 hover:bg-gray-200 transition" onclick="window.Cart.updateQuantity('${item.id}', ${item.quantity + 1})">+</button>
+                            </div>
+                            <div class="cart-item-price font-bold text-primary min-w-16 text-right">$${(item.price * item.quantity).toFixed(2)}</div>
+                            <button class="cart-item-remove bg-red-100 text-red-600 font-bold text-lg w-8 h-8 rounded hover:bg-red-200 transition" onclick="window.Cart.removeItem('${item.id}')" title="Remove item">×</button>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Update totals
+                const totals = this.getTotals();
+                if (cartSubtotal) cartSubtotal.textContent = `$${totals.subtotal.toFixed(2)}`;
+                if (cartDiscount) cartDiscount.textContent = `-$${totals.discount.toFixed(2)}`;
+                if (cartTax) cartTax.textContent = `$${totals.tax.toFixed(2)}`;
+                if (cartTotal) cartTotal.textContent = `$${totals.total.toFixed(2)}`;
+
+                // Update discount code input
+                const discountCodeInput = document.getElementById('cart-discount-code');
+                if (discountCodeInput) {
+                    discountCodeInput.value = this.discountCode;
+                }
+
+                this.updateCartCount();
+            }
+
+            // Proceed to checkout — show progress then open payment modal full-screen
+            proceedToCheckout() {
+                const checkoutData = this.getCheckoutData();
+                console.log('Proceeding to checkout:', checkoutData);
+                // Start a short progress animation, then open payment modal
+                if (typeof startCheckoutProgress === 'function') {
+                    startCheckoutProgress(2200); // duration in ms
+                } else {
+                    // Fallback: open payment modal directly
+                    showPaymentModalFullscreen();
+                }
+            }
+
+            // Initialize cart event listeners
+            initializeEventListeners() {
+                // Clear cart button
+                const clearCartBtn = document.getElementById('cart-clear-btn');
+                if (clearCartBtn) {
+                    clearCartBtn.addEventListener('click', () => this.clear());
+                }
+
+                // Apply discount button
+                const applyDiscountBtn = document.getElementById('cart-apply-discount');
+                if (applyDiscountBtn) {
+                    applyDiscountBtn.addEventListener('click', () => {
+                        const discountCodeInput = document.getElementById('cart-discount-code');
+                        if (discountCodeInput) {
+                            this.applyDiscount(discountCodeInput.value);
+                        }
+                    });
+                }
+
+                // Discount code input Enter key
+                const discountCodeInput = document.getElementById('cart-discount-code');
+                if (discountCodeInput) {
+                    discountCodeInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') {
+                            this.applyDiscount(discountCodeInput.value);
+                        }
+                    });
+                }
+            }
+        }
+
+        // Initialize cart when DOM loads
+        window.Cart = new ShoppingCart();
+        window.Cart.initializeEventListeners();
+
+        // Profile functions
+        async function loadUserProfile() {
+            if (!currentUser) return;
+
+            document.getElementById('profile-name').value = currentUser.name || '';
+            document.getElementById('profile-email').value = currentUser.email || '';
+            document.getElementById('profile-location').value = currentUser.location || '';
+
+            const profilePicPreview = document.getElementById('profile-pic-preview');
+            if (currentUser.profilePic) {
+                profilePicPreview.src = 'data:image/jpeg;base64,' + currentUser.profilePic;
+            } else {
+                profilePicPreview.src = 'https://placehold.co/100x100/475569/f1f5f9?text=Profile';
+            }
+        }
+
+        async function handleProfileSubmit(event) {
+            event.preventDefault();
+
+            if (!currentUser) {
+                showMessageBox('Please login first.', 'error', 'profile-message-container');
+                return;
+            }
+
+            const name = document.getElementById('profile-name').value.trim();
+            const email = document.getElementById('profile-email').value.trim();
+            const location = document.getElementById('profile-location').value.trim();
+
+            if (name === '') {
+                showMessageBox('Please enter your full name.', 'error', 'profile-message-container');
+                return;
+            }
+
+            // Handle profile picture upload
+            const fileInput = document.getElementById('profile-pic-file');
+            let profilePicBase64 = currentUser.profilePic;
+
+            if (fileInput.files[0]) {
+                try {
+                    profilePicBase64 = await fileToBase64(fileInput.files[0]);
+                } catch (error) {
+                    showMessageBox('Error uploading profile picture.', 'error', 'profile-message-container');
+                    return;
+                }
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('name', name);
+                formData.append('email', email);
+                formData.append('location', location);
+                if (fileInput.files[0]) {
+                    formData.append('profilePic', fileInput.files[0]);
+                }
+
+                const response = await fetch(API_BASE + '/users/' + currentUser.id + '/profile', {
+                    method: 'PUT',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    // Update current user data
+                    currentUser.name = name;
+                    currentUser.email = email;
+                    currentUser.location = location;
+                    if (profilePicBase64) {
+                        currentUser.profilePic = profilePicBase64;
+                    }
+
+                    updateGreeting();
+                    closeModal('profile-modal');
+                    showMessageBox('Profile updated! Welcome, ' + currentUser.name.split(' ')[0] + '.', 'success', 'cart-message-container');
+                } else {
+                    throw new Error('Failed to update profile');
+                }
+            } catch (error) {
+                showMessageBox('Error updating profile.', 'error', 'profile-message-container');
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                if (!file) {
+                    resolve(null);
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    reject(new Error("File size exceeds 5MB. Please choose a smaller image."));
+                    return;
+                }
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result.split(',')[1]); // Remove data:image/jpeg;base64, prefix
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // Other functions
+        function shareProduct(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) {
+                showMessageBox('Product not found for sharing.', 'error', 'top-notification');
+                return;
+            }
+
+            const shareData = {
+                title: 'Maricafe: ' + product.name,
+                text: 'Check out this delicious snack from Maricafe: ' + product.name + ' for UGX ' + product.price.toFixed(2) + '!',
+                url: window.location.href.split('#')[0] + '#product-' + productId
+            };
+
+            if (navigator.share) {
+                navigator.share(shareData).then(() => {
+                    showMessageBox('Shared "' + product.name + '" using native app!', 'success', 'top-notification');
+                }).catch(error => {
+                    if (error.name !== 'AbortError') {
+                        console.error('Error sharing:', error);
+                        copyToClipboard(shareData.text, product.name);
+                    }
+                });
+            } else {
+                copyToClipboard(shareData.text, product.name);
+            }
+        }
+
+        function copyToClipboard(text, name) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showMessageBox('Share link for "' + name + '" copied to clipboard!', 'success', 'top-notification');
+        }
+
+        // Payment functions
+        function openPaymentModal() {
+            if (!Cart || Cart.items.length === 0) {
+                showMessageBox("Your cart is empty! Add some snacks first.", 'error', 'cart-message-container');
+                return;
+            }
+            // Require a logged-in (non-guest) user at checkout
+            if (!currentUser || (currentUser.id && String(currentUser.id).startsWith('guest_'))) {
+                pendingCheckout = true;
+                showMessageBox('Please login to complete checkout.', 'info', 'top-notification');
+                openModal('login-modal');
+                return;
+            }
+
+            closeModal('cart-modal');
+            const totals = Cart.getTotals();
+            finalPaymentAmount = totals.total;
+            paymentDueAmountElement.innerText = 'UGX ' + totals.total.toFixed(2);
+            selectedPaymentMethod = null;
+            finalCheckoutButton.disabled = true;
+            document.querySelectorAll('.payment-option').forEach(el => el.classList.remove('selected'));
+            document.getElementById('payment-details-form').innerHTML = '';
+            openModal('payment-modal');
+        }
+
+        function selectPayment(method) {
+            selectedPaymentMethod = method;
+            document.querySelectorAll('.payment-option').forEach(el => {
+                el.classList.remove('selected');
+            });
+            document.querySelector('.payment-option[data-method="' + method + '"]').classList.add('selected');
+
+            const totals = Cart.getTotals();
+            const baseTotal = totals.total;
+
+            if (method === 'cod') {
+                finalPaymentAmount = baseTotal * 1.03;
+                finalCheckoutButton.innerText = 'Place Order';
+            } else {
+                finalPaymentAmount = baseTotal;
+                finalCheckoutButton.innerText = 'Pay Now';
+            }
+
+            document.getElementById('payment-due-amount').innerText = 'UGX ' + finalPaymentAmount.toFixed(2);
+            renderPaymentForm(method);
+        }
+
+        function renderPaymentForm(method) {
+            const formContainer = document.getElementById('payment-details-form');
+            let formHtml = '';
+            const totals = Cart.getTotals();
+            const baseAmountDue = totals.total.toFixed(2);
+            const finalAmountDue = finalPaymentAmount.toFixed(2);
+
+            if (method === 'mtn' || method === 'airtel') {
+                formHtml = '<div class="payment-input-group"><label for="payment-phone">Mobile Phone Number</label><input type="tel" id="payment-phone" placeholder="e.g., +2567xxxxxxxx" required oninput="validatePaymentForm()"></div><div class="payment-input-group"><label for="payment-amount">Amount Due</label><input type="text" id="payment-amount" value="UGX ' + baseAmountDue + '" readonly style="font-weight: bold; background-color: #f8f9fa;"></div>';
+            } else if (method === 'marzpay') {
+                formHtml = '<div class="payment-input-group"><label for="payment-email">Email Address</label><input type="email" id="payment-email" placeholder="Enter your email" required oninput="validatePaymentForm()"></div><div class="payment-input-group"><label for="payment-phone">Phone Number</label><input type="tel" id="payment-phone" placeholder="Enter your phone number (e.g., +256701234567)" required oninput="validatePaymentForm()"></div><div class="payment-input-group"><label for="payment-amount">Amount Due</label><input type="text" id="payment-amount" value="UGX ' + baseAmountDue + '" readonly style="font-weight: bold; background-color: #f8f9fa;"></div>';
+            } else if (method === 'cod') {
+                const baseTotalNum = parseFloat(baseAmountDue);
+                const surcharge = (finalPaymentAmount - baseTotalNum).toFixed(2);
+                formHtml = '<div class="message-box" style="background:#f0f9ff; border-color:#3b82f6; color:#1e40af; text-align: left;"><h4 style="margin-bottom: 5px;">Cash on Delivery selected.</h4><p>Base Total: UGX ' + baseAmountDue + '</p><p>+ 3% COD Surcharge: UGX ' + surcharge + '</p><p style="font-size: 1.1em; font-weight: bold;">Final Total Due on Delivery: UGX ' + finalAmountDue + '</p></div>';
+            }
+
+            formContainer.innerHTML = formHtml;
+            validatePaymentForm();
+        }
+
+        function validatePaymentForm() {
+            const phoneInput = document.getElementById('payment-phone');
+            const finalCheckoutButton = document.querySelector('.final-checkout-button');
+            let isValid = false;
+
+            if (selectedPaymentMethod === 'mtn' || selectedPaymentMethod === 'airtel') {
+                isValid = phoneInput && phoneInput.value.trim().length >= 10;
+            } else if (selectedPaymentMethod === 'marzpay') {
+                const emailInput = document.getElementById('payment-email');
+                const isEmailValid = emailInput && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value.trim());
+                const isPhoneValid = phoneInput && phoneInput.value.trim().length >= 10;
+                isValid = isEmailValid && isPhoneValid;
+            } else if (selectedPaymentMethod === 'cod') {
+                isValid = true;
+            }
+
+            finalCheckoutButton.disabled = !isValid;
+        }
+
+        // Payment API Configuration
+        const PAYMENT_CONFIG = {
+            apiKey: 'marz_zuCBBQnpFcokbH2a',
+            apiSecret: 'bsX7IbrHcTEWnG5wYeU5brAkr46CxRwt',
+            authHeader: 'Basic bWFyel96dUNCQlFucEZjb2tiSDJhOmJzWDdJYnJIY1RFV25HNXdZZVU1YnJBa3I0NkN4Und0',
+            baseUrl: 'https://api.marzpay.com' // Payment gateway API endpoint
+        };
+
+        // Send order notification to user inbox
+        async function sendOrderNotificationToUser(userId, orderData, status = 'success', errorMessage = null) {
+            try {
+                const itemsList = orderData.items.map(item => 
+                    `- ${item.name} x${item.quantity} - $${(item.price * item.quantity).toFixed(2)}`
+                ).join('\n');
+
+                let subject, content;
+                
+                if (status === 'success') {
+                    subject = `[OK] Order Confirmed - Order #${orderData.orderId || 'PENDING'}`;
+                    content = `Your order has been successfully placed!\n\n` +
+                        `Order Details:\n` +
+                        `Order ID: ${orderData.orderId || 'PENDING'}\n` +
+                        `Date: ${new Date().toLocaleString()}\n` +
+                        `Payment Method: ${orderData.paymentMethod.toUpperCase()}\n\n` +
+                        `Items:\n${itemsList}\n\n` +
+                        `Subtotal: $${orderData.subtotal.toFixed(2)}\n` +
+                        `Discount: -$${orderData.discount.toFixed(2)}\n` +
+                        `Tax: $${orderData.tax.toFixed(2)}\n` +
+                        `Total: $${orderData.total.toFixed(2)}\n\n` +
+                        (orderData.paymentMethod === 'cod' 
+                            ? `Note: This is a Cash on Delivery order. Please have exact change ready.\n\n`
+                            : `Payment Status: Completed\n\n`) +
+                        `Thank you for your order! We're preparing your items.`;
+                } else {
+                    subject = `[FAILED] Order Failed - Please Try Again`;
+                    content = `Unfortunately, your order could not be processed.\n\n` +
+                        `Error: ${errorMessage || 'Payment processing failed'}\n\n` +
+                        `Order Summary:\n${itemsList}\n\n` +
+                        `Total: $${orderData.total.toFixed(2)}\n\n` +
+                        `Please try again with a different payment method or contact support for assistance.`;
+                }
+
+                // Send via Socket.IO
+                sendMessageViaSocket('system', userId, subject, content, 'order_notification');
+            } catch (error) {
+                console.error('Error sending user notification:', error);
+            }
+        }
+
+        // Send order notification to admin inbox
+        async function sendOrderNotificationToAdmin(userData, orderData, status = 'success', errorMessage = null) {
+            try {
+                const itemsList = orderData.items.map(item => 
+                    `- ${item.name} x${item.quantity} - $${(item.price * item.quantity).toFixed(2)}`
+                ).join('\n');
+
+                let subject, content;
+                
+                if (status === 'success') {
+                    subject = `[NEW ORDER] New Order Received - Order #${orderData.orderId || 'PENDING'} from ${userData.name}`;
+                    content = `A new order has been placed!\n\n` +
+                        `Customer Information:\n` +
+                        `Name: ${userData.name}\n` +
+                        `Email: ${userData.email}\n` +
+                        `User ID: ${userData.id}\n` +
+                        `Phone: ${userData.phone || 'N/A'}\n` +
+                        `Location: ${userData.location || 'N/A'}\n\n` +
+                        `Order Details:\n` +
+                        `Order ID: ${orderData.orderId || 'PENDING'}\n` +
+                        `Date: ${new Date().toLocaleString()}\n` +
+                        `Payment Method: ${orderData.paymentMethod.toUpperCase()}\n\n` +
+                        `Items Ordered:\n${itemsList}\n\n` +
+                        `Subtotal: $${orderData.subtotal.toFixed(2)}\n` +
+                        `Discount Applied: -$${orderData.discount.toFixed(2)}\n` +
+                        `Tax: $${orderData.tax.toFixed(2)}\n` +
+                        `Total Amount: $${orderData.total.toFixed(2)}\n\n` +
+                        `Payment Status: ${orderData.paymentStatus || 'completed'}\n` +
+                        `Transaction ID: ${orderData.transactionId || 'N/A'}\n\n` +
+                        `Action Required: Please prepare the order and arrange delivery/pickup.`;
+                } else {
+                    subject = `[WARNING] Order Failed - ${userData.name} (User ID: ${userData.id})`;
+                    content = `An order payment failed and was not completed.\n\n` +
+                        `Customer Information:\n` +
+                        `Name: ${userData.name}\n` +
+                        `Email: ${userData.email}\n` +
+                        `User ID: ${userData.id}\n\n` +
+                        `Failed Order Details:\n` +
+                        `Payment Method: ${orderData.paymentMethod.toUpperCase()}\n` +
+                        `Error: ${errorMessage || 'Unknown error'}\n\n` +
+                        `Items that were attempted:\n${itemsList}\n\n` +
+                        `Total Amount: $${orderData.total.toFixed(2)}\n\n` +
+                        `Action: No action required. Customer will retry or contact support.`;
+                }
+
+                // Send to admin via Socket.IO
+                sendMessageViaSocket('system', 'admin', subject, content, 'order_alert');
+            } catch (error) {
+                console.error('Error sending admin notification:', error);
+            }
+        }
+
+        async function confirmPayment() {
+            // Ensure user is authenticated before placing the order
+            if (!currentUser || (currentUser.id && String(currentUser.id).startsWith('guest_'))) {
+                pendingCheckout = true;
+                showMessageBox('Please login to place this order.', 'info', 'payment-message-container');
+                openModal('login-modal');
+                return;
+            }
+
+            if (!selectedPaymentMethod) {
+                showMessageBox('Please select a payment method.', 'error', 'payment-message-container');
+                return;
+            }
+
+            try {
+                const checkoutData = Cart.getCheckoutData();
+                const orderData = {
+                    userId: currentUser.id,
+                    total: finalPaymentAmount,
+                    items: checkoutData.items,
+                    paymentMethod: selectedPaymentMethod,
+                    subtotal: checkoutData.subtotal,
+                    discount: checkoutData.discount,
+                    tax: checkoutData.tax
+                };
+
+                // Process payment via MarzPay API for card payments
+                if (selectedPaymentMethod === 'marzpay') {
+                    showMessageBox('Processing payment...', 'info', 'payment-message-container');
+                    
+                    const emailField = document.getElementById('payment-email');
+                    const phoneField = document.getElementById('payment-phone');
+                    const customerEmail = (emailField && emailField.value.trim()) || currentUser.email;
+                    const customerPhone = (phoneField && phoneField.value.trim()) || currentUser.phone || null;
+
+                    if (!customerEmail || !customerPhone) {
+                        showMessageBox('Email and phone number are required for MarzPay payments.', 'error', 'payment-message-container');
+                        return;
+                    }
+
+                    const paymentPayload = {
+                        amount: Math.round(finalPaymentAmount * 100), // amount in smallest currency unit
+                        currency: 'UGX',
+                        description: `Order from ${currentUser.name || 'Customer'}`,
+                        customer: {
+                            id: currentUser.id,
+                            email: customerEmail,
+                            phone: customerPhone,
+                            name: currentUser.name
+                        },
+                        metadata: {
+                            orderId: generateId(),
+                            items: checkoutData.items.length
+                        }
+                    };
+
+                    try {
+                        // Call MarzPay API to create payment intent
+                        const paymentResponse = await fetch(`${PAYMENT_CONFIG.baseUrl}/v1/payment_intents`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': PAYMENT_CONFIG.authHeader,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(paymentPayload)
+                        });
+
+                        if (!paymentResponse.ok) {
+                            throw new Error('Payment processing failed');
+                        }
+
+                        const paymentResult = await paymentResponse.json();
+                        const orderId = paymentResult.id || paymentResult.payment_id || generateId();
+                        
+                        // Save order to database with payment confirmation
+                        const response = await fetch(API_BASE + '/orders', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                ...orderData,
+                                orderId: orderId,
+                                paymentIntentId: paymentResult.id || paymentResult.payment_id,
+                                paymentStatus: 'completed',
+                                transactionId: paymentResult.transaction_id,
+                                timestamp: new Date().toISOString()
+                            })
+                        });
+
+                        if (response.ok) {
+                            const orderResponse = await response.json();
+                            
+                            // Send success notification to user
+                            await sendOrderNotificationToUser(currentUser.id, {
+                                ...orderData,
+                                orderId: orderId,
+                                paymentMethod: selectedPaymentMethod,
+                                paymentStatus: 'completed'
+                            }, 'success');
+
+                            // Send alert to admin
+                            await sendOrderNotificationToAdmin(currentUser, {
+                                ...orderData,
+                                orderId: orderId,
+                                paymentMethod: selectedPaymentMethod,
+                                paymentStatus: 'completed',
+                                transactionId: paymentResult.transaction_id
+                            }, 'success');
+
+                            closeModal('payment-modal');
+                            showMessageBox(
+                                `Payment of UGX ${finalPaymentAmount.toFixed(2)} successful via MarzPay! Your order is being processed. Order ID: ${orderId}`,
+                                'success',
+                                'top-notification'
+                            );
+                            Cart.clear();
+                            Cart.render();
+                        } else {
+                            throw new Error('Order creation failed');
+                        }
+                    } catch (paymentError) {
+                        console.error('MarzPay Error:', paymentError);
+                        
+                        // Send failure notification to user
+                        await sendOrderNotificationToUser(currentUser.id, orderData, 'failed', paymentError.message);
+
+                        // Send alert to admin about failed payment
+                        await sendOrderNotificationToAdmin(currentUser, {
+                            ...orderData,
+                            paymentMethod: selectedPaymentMethod
+                        }, 'failed', paymentError.message);
+
+                        showMessageBox(
+                            `Payment failed: ${paymentError.message}. Please try again or use a different payment method.`,
+                            'error',
+                            'payment-message-container'
+                        );
+                        return;
+                    }
+                } 
+                // Process Cash on Delivery
+                else if (selectedPaymentMethod === 'cod') {
+                    const orderId = generateId();
+                    const response = await fetch(API_BASE + '/orders', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ...orderData,
+                            orderId: orderId,
+                            paymentStatus: 'pending',
+                            paymentMethod: 'cod',
+                            timestamp: new Date().toISOString()
+                        })
+                    });
+
+                    if (response.ok) {
+                        const baseTotalNum = checkoutData.subtotal - checkoutData.discount + checkoutData.tax;
+                        const surcharge = (finalPaymentAmount - baseTotalNum).toFixed(2);
+                        
+                        // Send success notification to user
+                        await sendOrderNotificationToUser(currentUser.id, {
+                            ...orderData,
+                            orderId: orderId,
+                            paymentMethod: 'cod',
+                            paymentStatus: 'pending'
+                        }, 'success');
+
+                        // Send alert to admin
+                        await sendOrderNotificationToAdmin(currentUser, {
+                            ...orderData,
+                            orderId: orderId,
+                            paymentMethod: 'cod',
+                            paymentStatus: 'pending'
+                        }, 'success');
+
+                        closeModal('payment-modal');
+                        const successMessage = `Order confirmed! Total of $${finalPaymentAmount.toFixed(2)} (includes $${surcharge} COD fee) due on delivery. Thank you!`;
+                        
+                        showMessageBox(successMessage, 'success', 'top-notification');
+                        Cart.clear();
+                        Cart.render();
+                    } else {
+                        throw new Error('Failed to place order');
+                    }
+                } else {
+                    throw new Error('Unknown payment method');
+                }
+            } catch (error) {
+                console.error('Order Error:', error);
+                
+                // Send failure notification to user
+                try {
+                    await sendOrderNotificationToUser(currentUser.id, orderData, 'failed', error.message);
+                    await sendOrderNotificationToAdmin(currentUser, orderData, 'failed', error.message);
+                } catch (notifyError) {
+                    console.error('Error sending notifications:', notifyError);
+                }
+                
+                showMessageBox(`Error placing order: ${error.message}`, 'error', 'payment-message-container');
+            }
+        }
+
+        // Contact form
+        function handleContactSubmit(event) {
+            event.preventDefault();
+
+            if (!currentUser) {
+                showMessageBox('Please login first to send messages.', 'error', 'contact-message');
+                return;
+            }
+
+            const name = contactForm.querySelector('input[name="name"]').value;
+            const email = contactForm.querySelector('input[name="email"]').value;
+            const message = contactForm.querySelector('textarea[name="message"]').value;
+
+            if (!name || !email || !message) {
+                showMessageBox('Please fill all fields.', 'error', 'contact-message');
+                return;
+            }
+
+            // Send message via Socket.IO
+            sendMessageViaSocket(currentUser.id, 'admin', 'Contact from ' + name, 'Email: ' + email + '\n\n' + message, 'contact');
+
+            contactMessage.innerText = 'Thank you for your message! We will be in touch soon.';
+            playNotificationSound();
+            contactForm.reset();
+            setTimeout(() => {
+                contactMessage.innerText = '';
+            }, 4000);
+        }
+
+        // Notification dismiss
+        function dismissNotification() {
+            notificationBar.style.display = 'none';
+            document.documentElement.classList.add('notification-hidden');
+        }
+
+        // Inbox functions
+        async function loadUserMessages() {
+            if (!currentUser) return;
+
+            try {
+                const response = await fetch(API_BASE + '/messages/' + currentUser.id);
+                userMessages = await response.json();
+                updateInboxCount();
+            } catch (error) {
+                console.error('Error loading user messages:', error);
+                userMessages = [];
+            }
+        }
+
+        function updateInboxCount() {
+            const unreadCount = userMessages.filter(msg => !msg.isRead && msg.fromUserId !== currentUser.id).length;
+            const inboxCountElement = document.getElementById('inbox-count');
+
+            if (!inboxCountElement) {
+                console.error('inbox-count element not found');
+                return;
+            }
+
+            if (unreadCount > 0) {
+                inboxCountElement.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                inboxCountElement.classList.remove('hidden');
+            } else {
+                inboxCountElement.classList.add('hidden');
+            }
+        }
+
+        function openInbox() {
+            if (!currentUser) {
+                showMessageBox('Please login first to view your inbox.', 'error', 'top-notification');
+                openModal('login-modal');
+                return;
+            }
+
+            renderInboxMessages();
+            openModal('inbox-modal');
+        }
+
+        function renderInboxMessages() {
+            const messagesList = document.getElementById('inbox-messages-list');
+            const emptyState = document.getElementById('inbox-empty-state');
+
+            if (userMessages.length === 0) {
+                messagesList.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            // Sort messages chronologically (oldest first) for chat feel
+            const sortedMessages = userMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            messagesList.innerHTML = `
+                <div class="chat-container">
+                    ${sortedMessages.map(msg => {
+                const isFromUser = msg.fromUserId === currentUser.id;
+                const isAdmin = msg.fromUserId === 'admin';
+                const isSending = msg.id && msg.id.startsWith('local_');
+                let bubbleClass = isFromUser ? 'chat-bubble user' : 'chat-bubble admin';
+                if (isAdmin && msg.type !== 'broadcast') {
+                    bubbleClass += ' direct-message';
+                }
+                const bubbleClassWithSending = isSending ? bubbleClass + ' sending' : bubbleClass;
+                return `
+                            <div class="chat-row ${isFromUser ? 'align-end' : ''}">
+                                <div class="${bubbleClassWithSending}">
+                                    <div class="chat-content">${msg.content.replace(/\n/g, '<br/>')}</div>
+                                    <div class="chat-meta">
+                                        <span class="chat-time">${new Date(msg.timestamp).toLocaleString()}</span>
+                                        ${isSending ? '<span class="chat-sending-indicator"><span class="spinner"></span>Sending</span>' : ''}
+                                        ${isAdmin && msg.type !== 'broadcast' ? `<button class="chat-reply" onclick="showInlineReply('${msg.id}', '${msg.fromUserId}')">Reply</button>` : ''}
+                                    </div>
+                                                    <div id="reply-container-${msg.id}" class="reply-composer-container" style="margin-top:8px;"></div>
+                                                </div>
+                            </div>
+                        `;
+            }).join('')}
+                </div>
+            `;
+        }
+
+        async function markMessageAsRead(messageId) {
+            try {
+                await fetch(`${API_BASE}/messages/${messageId}/read`, { method: 'PUT' });
+                await loadUserMessages(); // Reload messages
+                renderInboxMessages(); // Re-render
+                showMessageBox('Message marked as read.', 'success', 'inbox-message-container');
+            } catch (error) {
+                console.error('Error marking message as read:', error);
+                showMessageBox('Error updating message.', 'error', 'inbox-message-container');
+            }
+        }
+
+        // Reply to admin (from user) — open inline composer or send via socket/API
+        function replyToAdmin(messageId, toUserId) {
+            // For backward compatibility, open the inline composer
+            showInlineReply(messageId, toUserId);
+        }
+
+        // Show an inline reply composer under the specified message
+        function showInlineReply(messageId, toUserId) {
+            if (!currentUser) {
+                showMessageBox('Please login to reply.', 'error', 'top-notification');
+                openModal('login-modal');
+                return;
+            }
+
+            const container = document.getElementById('reply-container-' + messageId);
+            if (!container) return;
+
+            // If composer already exists, focus it
+            if (container.querySelector('#reply-input-' + messageId)) {
+                container.querySelector('#reply-input-' + messageId).focus();
+                return;
+            }
+
+            container.innerHTML = `
+                <div style="display:flex; gap:8px; align-items:center">
+                    <input id="reply-input-${messageId}" placeholder="Write a reply..." class="p-2 rounded-md border" style="flex:1; min-width:120px;" />
+                    <button class="chat-reply" title="Send" onclick="sendInlineReply('${messageId}', '${toUserId}')"><i class="material-icons">send</i></button>
+                    <button class="chat-reply" title="Cancel" onclick="hideInlineReply('${messageId}')"><i class="material-icons">close</i></button>
+                </div>
+            `;
+
+            // Auto-focus
+            setTimeout(() => {
+                const inp = document.getElementById('reply-input-' + messageId);
+                if (inp) inp.focus();
+            }, 50);
+        }
+
+        function hideInlineReply(messageId) {
+            const container = document.getElementById('reply-container-' + messageId);
+            if (container) container.innerHTML = '';
+        }
+
+        // Send reply from inline composer
+        async function sendInlineReply(messageId, toUserId) {
+            const input = document.getElementById('reply-input-' + messageId);
+            if (!input) return;
+            const text = input.value.trim();
+            if (!text) {
+                showMessageBox('Please enter a reply message.', 'error', 'top-notification');
+                return;
+            }
+            // Optimistic UI: render the reply locally immediately
+            try {
+                const localId = 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+                const newMsg = {
+                    id: localId,
+                    fromUserId: currentUser.id,
+                    toUserId: toUserId,
+                    subject: 'Re:',
+                    content: text,
+                    timestamp: new Date().toISOString(),
+                    type: 'reply',
+                    isRead: 0
+                };
+
+                // Append to local messages and re-render
+                userMessages.push(newMsg);
+                renderInboxMessages();
+                hideInlineReply(messageId);
+
+                // Send in background
+                if (socket && socket.connected) {
+                    socket.emit('send-message', newMsg);
+                } else {
+                    await postData('messages', newMsg);
+                }
+
+                // After server processes, reload messages to sync and replace local placeholders
+                setTimeout(async () => {
+                    try {
+                        await loadUserMessages();
+                        renderInboxMessages();
+                    } catch (err) {
+                        console.error('Error reloading messages:', err);
+                    }
+                }, 500);
+                showMessageBox('Reply sent!', 'success', 'top-notification');
+            } catch (err) {
+                console.error('Error sending reply:', err);
+                showMessageBox('Failed to send reply.', 'error', 'top-notification');
+            }
+        }
+
+        // Settings helpers
+        function loadSettings() {
+            try {
+                const raw = localStorage.getItem('maricafe_settings');
+                const defaults = {
+                    theme: 'system',
+                    primaryColor: '#f97316',
+                    currency: 'UGX',
+                    notifications: true,
+                    pwa: true,
+                    adminPin: localStorage.getItem('admin_pin') || '1234',
+                    paymentKey: '',
+                    paymentSecret: '',
+                    paymentAuth: '',
+                    paymentBase: '',
+                    apiBase: ''
+                };
+                const settings = raw ? Object.assign(defaults, JSON.parse(raw)) : defaults;
+                window.APP_SETTINGS = settings;
+
+                // Populate controls if present
+                const el = id => document.getElementById(id);
+                if (el('setting-theme')) el('setting-theme').value = settings.theme;
+                if (el('setting-primary-color')) el('setting-primary-color').value = settings.primaryColor;
+                if (el('setting-currency')) el('setting-currency').value = settings.currency;
+                if (el('setting-notifications')) el('setting-notifications').checked = !!settings.notifications;
+                if (el('setting-pwa')) el('setting-pwa').checked = !!settings.pwa;
+                if (el('setting-admin-pin')) el('setting-admin-pin').value = settings.adminPin || '';
+                if (el('setting-payment-key')) el('setting-payment-key').value = settings.paymentKey || '';
+                if (el('setting-payment-secret')) el('setting-payment-secret').value = settings.paymentSecret || '';
+                if (el('setting-payment-auth')) el('setting-payment-auth').value = settings.paymentAuth || '';
+                if (el('setting-payment-base')) el('setting-payment-base').value = settings.paymentBase || '';
+                if (el('setting-api-base')) el('setting-api-base').value = settings.apiBase || '';
+
+                applySettings();
+            } catch (err) {
+                console.error('Failed to load settings:', err);
+            }
+        }
+
+        function saveSettings() {
+            try {
+                const el = id => document.getElementById(id);
+                const newSettings = Object.assign({}, window.APP_SETTINGS || {});
+                if (el('setting-theme')) newSettings.theme = el('setting-theme').value;
+                if (el('setting-primary-color')) newSettings.primaryColor = el('setting-primary-color').value;
+                if (el('setting-currency')) newSettings.currency = el('setting-currency').value;
+                if (el('setting-notifications')) newSettings.notifications = !!el('setting-notifications').checked;
+                if (el('setting-pwa')) newSettings.pwa = !!el('setting-pwa').checked;
+                if (el('setting-admin-pin')) newSettings.adminPin = el('setting-admin-pin').value || newSettings.adminPin;
+                if (el('setting-payment-key')) newSettings.paymentKey = el('setting-payment-key').value || '';
+                if (el('setting-payment-secret')) newSettings.paymentSecret = el('setting-payment-secret').value || '';
+                if (el('setting-payment-auth')) newSettings.paymentAuth = el('setting-payment-auth').value || '';
+                if (el('setting-payment-base')) newSettings.paymentBase = el('setting-payment-base').value || '';
+                if (el('setting-api-base')) newSettings.apiBase = el('setting-api-base').value || '';
+
+                localStorage.setItem('maricafe_settings', JSON.stringify(newSettings));
+                window.APP_SETTINGS = newSettings;
+
+                // Persist admin PIN to the same key as other code expects
+                if (newSettings.adminPin) {
+                    localStorage.setItem('admin_pin', newSettings.adminPin);
+                    if (typeof savePin === 'function') savePin(newSettings.adminPin);
+                }
+
+                applySettings();
+                showMessageBox('Settings saved.', 'success', 'top-notification');
+                closeModal('settings-modal');
+            } catch (err) {
+                console.error('Failed to save settings:', err);
+                showMessageBox('Failed to save settings.', 'error', 'top-notification');
+            }
+        }
+
+        function applySettings() {
+            try {
+                const s = window.APP_SETTINGS || {};
+                // Theme
+                if (s.theme === 'dark') {
+                    document.documentElement.classList.add('theme-dark');
+                } else {
+                    document.documentElement.classList.remove('theme-dark');
+                }
+
+                // Primary color
+                if (s.primaryColor) {
+                    document.documentElement.style.setProperty('--primary-color', s.primaryColor);
+                    document.documentElement.style.setProperty('--accent-color', s.primaryColor);
+                }
+
+                // Currency
+                window.CURRENCY = s.currency || 'USD';
+                const symbolMap = { UGX: 'UGX' };
+                window.CURRENCY_SYMBOL = symbolMap[window.CURRENCY] || 'UGX';
+
+                // Notifications
+                if (s.notifications && 'Notification' in window) {
+                    if (Notification.permission === 'default') {
+                        // leave prompting to existing flow
+                    }
+                }
+
+                // PWA preference (stored for later when prompt appears)
+                window.APP_SETTINGS.pwa = !!s.pwa;
+
+                // Apply payment overrides if present
+                if (typeof PAYMENT_CONFIG !== 'undefined' && PAYMENT_CONFIG) {
+                    if (s.paymentKey) PAYMENT_CONFIG.apiKey = s.paymentKey;
+                    if (s.paymentSecret) PAYMENT_CONFIG.apiSecret = s.paymentSecret;
+                    if (s.paymentAuth) PAYMENT_CONFIG.authHeader = s.paymentAuth;
+                    if (s.paymentBase) PAYMENT_CONFIG.baseUrl = s.paymentBase;
+                }
+
+                // Expose custom API base if set (some parts of app may read this)
+                if (s.apiBase) {
+                    window.CUSTOM_API_BASE = s.apiBase;
+                }
+            } catch (err) {
+                console.error('Failed to apply settings:', err);
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Load and apply saved settings early
+            loadSettings();
+            initializeAudio();
+            initializeSocket();
+
+            // Show login modal on load
+            openModal('login-modal');
+
+            // Form event listeners
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const pin = document.getElementById('login-pin').value;
+                login(pin);
+            });
+
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('register-name').value.trim();
+                const email = document.getElementById('register-email').value.trim();
+                const location = document.getElementById('register-location').value.trim();
+                const pin = document.getElementById('register-pin').value;
+
+                if (!name || !email || !pin) {
+                    showMessageBox('Please fill all required fields.', 'error', 'register-message-container');
+                    return;
+                }
+
+                await register({ name, email, pin, location });
+            });
+
+            profileForm.addEventListener('submit', handleProfileSubmit);
+            contactForm.addEventListener('submit', handleContactSubmit);
+            notificationClose.addEventListener('click', dismissNotification);
+
+            profileButton.addEventListener('click', () => {
+                if (!currentUser) {
+                    openModal('login-modal');
+                    return;
+                }
+                openModal('profile-modal');
+                loadUserProfile();
+            });
+
+            cartIcon.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (Cart) {
+                    Cart.render();
+                    openModal('cart-modal');
+                }
+            });
+
+            // Inbox button
+            const inboxButton = document.getElementById('bottom-inbox-btn');
+            if (inboxButton) {
+                inboxButton.addEventListener('click', openInbox);
+            }
+
+            // PWA Service Worker Registration
+            initializePWA();
+        });
+
+        // PWA Functions
+        function initializePWA() {
+            // Register service worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                    .then(registration => {
+                        console.log('Service Worker registered:', registration);
+
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            if (newWorker) {
+                                newWorker.addEventListener('statechange', () => {
+                                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                        showUpdateNotification();
+                                    }
+                                });
+                            }
+                        });
+
+                        // Register background sync
+                        if ('sync' in registration) {
+                            registerBackgroundSync(registration);
+                        }
+
+                        // Register periodic sync if supported
+                        if ('periodicSync' in registration) {
+                            registerPeriodicSync(registration);
+                        }
+
+                        // Listen for messages from service worker
+                        navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+
+                        // Request notification permission
+                        requestNotificationPermission();
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                    });
+            }
+        }
+
+        // Checkout progress helper (shows progress overlay then opens payment modal fullscreen)
+        function startCheckoutProgress(duration = 2000) {
+            const overlay = document.getElementById('checkout-progress');
+            const fill = document.getElementById('progress-fill');
+            const percentEl = document.getElementById('progress-percent');
+            if (!overlay || !fill || !percentEl) return showPaymentModalFullscreen();
+
+            overlay.classList.add('active');
+            fill.style.width = '0%';
+            percentEl.textContent = '0%';
+
+            const start = performance.now();
+            function step(now) {
+                const elapsed = now - start;
+                const pct = Math.min(100, Math.round((elapsed / duration) * 100));
+                fill.style.width = pct + '%';
+                percentEl.textContent = pct + '%';
+                if (elapsed < duration) {
+                    requestAnimationFrame(step);
+                } else {
+                    // complete
+                    setTimeout(() => {
+                        overlay.classList.remove('active');
+                        // open payment modal fullscreen
+                        showPaymentModalFullscreen();
+                    }, 180);
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        function showPaymentModalFullscreen() {
+            const modalContent = document.querySelector('#payment-modal .modal-content');
+            if (modalContent) modalContent.classList.add('fullscreen');
+            openModal('payment-modal');
+            // Ensure the Pay Now button is enabled after opening
+            const finalCheckoutButton = document.querySelector('.final-checkout-button');
+            if (finalCheckoutButton) finalCheckoutButton.disabled = false;
+        }
+
+        // Handle install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            showInstallPrompt();
+        });
+
+        // Handle app installed
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA installed');
+            hideInstallPrompt();
+            showMessageBox('Maricafe PWA installed successfully!', 'success', 'top-notification');
+        });
+
+        // Handle online/offline status
+        window.addEventListener('online', () => {
+            showMessageBox('You are back online!', 'success', 'top-notification');
+            // Sync any pending data
+            if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.sync.register('sync-orders');
+                });
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            showMessageBox('You are offline. Some features may be limited.', 'warning', 'top-notification');
+        });
+
+        function requestNotificationPermission() {
+            if ('Notification' in window && navigator.serviceWorker) {
+                if (Notification.permission === 'default') {
+                    setTimeout(() => {
+                        if (confirm('Would you like to receive notifications about new snacks and offers?')) {
+                            Notification.requestPermission().then(permission => {
+                                if (permission === 'granted') {
+                                    showMessageBox('Notifications enabled! You\'ll be notified about new snacks.', 'success', 'top-notification');
+                                }
+                            });
+                        }
+                    }, 5000); // Ask after 5 seconds
+                }
+            }
+        }
+
+        function showInstallPrompt() {
+            // Create install prompt banner
+            const installBanner = document.createElement('div');
+            installBanner.id = 'install-banner';
+            installBanner.innerHTML = `
+                <div style="position: fixed; bottom: 70px; left: 10px; right: 10px; background: var(--card-bg); border: 1px solid var(--accent-color); border-radius: var(--border-radius); padding: 16px; box-shadow: var(--shadow-light); z-index: 1000; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0; color: var(--text-color); font-size: 1em;">Install Maricafe</h4>
+                        <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 0.9em;">Add to home screen for the best experience</p>
+                    </div>
+                    <div>
+                        <button onclick="installPWA()" style="background: var(--primary-color); color: white; border: none; padding: 8px 16px; border-radius: var(--border-radius); margin-right: 8px; cursor: pointer;">Install</button>
+                        <button onclick="hideInstallPrompt()" style="background: transparent; color: #94a3b8; border: none; padding: 8px; cursor: pointer;">✕</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(installBanner);
+        }
+
+        function hideInstallPrompt() {
+            const banner = document.getElementById('install-banner');
+            if (banner) {
+                banner.remove();
+            }
+        }
+
+        async function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('User accepted PWA install');
+                }
+                deferredPrompt = null;
+                hideInstallPrompt();
+            }
+        }
+
+        function showUpdateNotification() {
+            const updateBanner = document.createElement('div');
+            updateBanner.id = 'update-banner';
+            updateBanner.innerHTML = `
+                <div style="position: fixed; top: 40px; left: 10px; right: 10px; background: var(--success-color); border-radius: var(--border-radius); padding: 16px; box-shadow: var(--shadow-light); z-index: 1000; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="flex: 1;">
+                        <h4 style="margin: 0; color: white; font-size: 1em;">Update Available</h4>
+                        <p style="margin: 4px 0 0 0; color: rgba(255,255,255,0.9); font-size: 0.9em;">A new version of Maricafe is available</p>
+                    </div>
+                    <div>
+                        <button onclick="updatePWA()" style="background: white; color: var(--success-color); border: none; padding: 8px 16px; border-radius: var(--border-radius); margin-right: 8px; cursor: pointer; font-weight: 600;">Update</button>
+                        <button onclick="hideUpdateNotification()" style="background: transparent; color: white; border: none; padding: 8px; cursor: pointer;">✕</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(updateBanner);
+        }
+
+        function hideUpdateNotification() {
+            const banner = document.getElementById('update-banner');
+            if (banner) {
+                banner.remove();
+            }
+        }
+
+        function updatePWA() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
+                });
+            }
+            hideUpdateNotification();
+            location.reload();
+        }
+
+        // Register background sync
+        function registerBackgroundSync(registration) {
+            // Register sync when user comes back online
+            window.addEventListener('online', () => {
+                registration.sync.register('sync-resources').then(() => {
+                    console.log('Background sync registered for resources');
+                }).catch(error => {
+                    console.log('Background sync registration failed:', error);
+                });
+            });
+
+            // Register message sync
+            registration.sync.register('sync-messages').then(() => {
+                console.log('Background sync registered for messages');
+            }).catch(error => {
+                console.log('Message sync registration failed:', error);
+            });
+        }
+
+        // Register periodic sync
+        function registerPeriodicSync(registration) {
+            // Register periodic sync for updates (every 30 minutes)
+            registration.periodicSync.register('update-resources', {
+                minInterval: 30 * 60 * 1000 // 30 minutes
+            }).then(() => {
+                console.log('Periodic sync registered');
+            }).catch(error => {
+                console.log('Periodic sync registration failed:', error);
+            });
+
+            // Register periodic check for updates (every hour)
+            registration.periodicSync.register('check-updates', {
+                minInterval: 60 * 60 * 1000 // 1 hour
+            }).catch(error => {
+                console.log('Update check sync registration failed:', error);
+            });
+        }
+
+        // Handle messages from service worker
+        function handleServiceWorkerMessage(event) {
+            const { type, data } = event.data;
+
+            switch (type) {
+                case 'cache-updated':
+                    if (data.type === 'products') {
+                        console.log('Product cache updated, refreshing products...');
+                        loadProducts().then(() => {
+                            renderProducts();
+                            showMessageBox('Products updated automatically!', 'success', 'top-notification');
+                        });
+                    }
+                    break;
+
+                case 'sync-complete':
+                    console.log('Background sync completed');
+                    showMessageBox('Data synchronized successfully!', 'success', 'top-notification');
+                    // Refresh all data
+                    loadProducts().then(() => renderProducts());
+                    if (currentUser) {
+                        loadUserMessages();
+                    }
+                    break;
+
+                case 'messages-synced':
+                    if (currentUser && data.userId === currentUser.id) {
+                        console.log('Messages synced, refreshing inbox...');
+                        loadUserMessages();
+                        showMessageBox('Messages updated!', 'info', 'top-notification');
+                    }
+                    break;
+
+                case 'update-available':
+                    console.log('New version available:', data.newVersion);
+                    showUpdateNotification();
+                    break;
+
+                case 'GET_DATA':
+                    // Respond to service worker data requests
+                    const responseData = {};
+                    if (data.key === 'currentUser') {
+                        responseData[data.key] = currentUser;
+                    }
+                    event.ports[0].postMessage(responseData);
+                    break;
+            }
+        }
+
+        // Check PWA installation status
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            console.log('Running as PWA');
+        }
+    </script>
+</body>
+
+</html>
+
