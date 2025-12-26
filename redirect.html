@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Marion Snacks — Payment Status</title>
+  <style>
+    :root{
+      --brand-dark:#131517;
+      --brand:#1f8a4e;         /* success green */
+      --brand-accent:#ff8a00;  /* snack orange */
+      --danger:#e53935;        /* fail red */
+      --soft:#f5f7fa;
+      --text:#1a1d21;
+      --muted:#6b7280;
+      --card:#ffffff;
+      --radius:16px;
+      --shadow:0 10px 30px rgba(0,0,0,0.08);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      color:var(--text);
+      background: radial-gradient(1200px 600px at 20% -10%, #1f8a4e15, transparent),
+                  radial-gradient(900px 500px at 120% 20%, #ff8a0015, transparent),
+                  var(--soft);
+    }
+
+    /* Header / Brand */
+    .header{
+      display:flex; align-items:center; gap:12px;
+      padding:20px 20px 0;
+    }
+    .logo{
+      width:42px; height:42px; border-radius:10px;
+      background: conic-gradient(from 190deg at 50% 50%, #1f8a4e, #ff8a00, #1f8a4e);
+      position:relative; box-shadow: 0 6px 16px rgba(31,138,78,0.25);
+    }
+    .logo::after{
+      content:"🍪"; position:absolute; inset:0; display:grid; place-items:center;
+      font-size:24px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));
+    }
+    .brand{
+      font-weight:700; letter-spacing:0.2px; font-size:18px;
+    }
+    .subbrand{
+      color:var(--muted); font-size:12px; margin-top:2px;
+    }
+
+    /* Card */
+    .wrap{max-width:720px; margin:18px auto; padding:0 20px;}
+    .card{
+      background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow);
+      overflow:hidden; position:relative;
+    }
+    .hero{
+      padding:26px 24px 20px;
+      display:flex; align-items:center; gap:16px; border-bottom:1px solid #eef2f7;
+    }
+    .badge{
+      width:64px; height:64px; border-radius:18px; display:grid; place-items:center;
+      font-size:32px; color:#fff;
+    }
+    .badge.success{ background:linear-gradient(135deg, #1f8a4e, #46c37b);}
+    .badge.failed{  background:linear-gradient(135deg, #e53935, #ff6b6b);}
+    .title{font-size:22px; font-weight:700;}
+    .desc{color:var(--muted); font-size:14px; margin-top:4px;}
+
+    /* Details */
+    .content{padding:18px 24px 24px;}
+    .grid{display:grid; grid-template-columns:1fr; gap:12px;}
+    @media (min-width:680px){ .grid{grid-template-columns:1fr 1fr;} }
+    .item{
+      background:#f9fafb; border:1px solid #eef2f7; border-radius:12px; padding:12px 14px;
+    }
+    .label{color:#6b7280; font-size:12px; margin-bottom:6px;}
+    .value{font-weight:600; font-size:14px;}
+
+    /* CTA */
+    .ctas{
+      display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;
+    }
+    .btn{
+      appearance:none; border:none; border-radius:12px; padding:12px 16px;
+      font-weight:600; cursor:pointer; transition:transform .08s ease, box-shadow .2s ease;
+    }
+    .btn:active{transform:scale(0.98)}
+    .primary{ background:var(--brand); color:#fff; box-shadow: 0 8px 18px rgba(31,138,78,0.25); }
+    .secondary{ background:#111827; color:#fff; }
+    .ghost{ background:#ffffff; border:1px solid #e5e7eb; }
+    .danger{ background:var(--danger); color:#fff; box-shadow: 0 8px 18px rgba(229,57,53,0.25); }
+
+    /* Feedback box */
+    .hint{
+      margin-top:12px; font-size:13px; color:#6b7280;
+    }
+
+    /* Decorative snacks */
+    .snacks{
+      position:absolute; inset:0; pointer-events:none;
+    }
+    .chip, .cookie, .drink{
+      position:absolute; opacity:.12; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.08));
+    }
+    .chip{ right:-18px; top:-12px; font-size:92px }
+    .cookie{ left:-14px; bottom:-10px; font-size:88px }
+    .drink{ right:10px; bottom:6px; font-size:56px }
+
+    /* Confetti canvas overlay */
+    canvas#confetti{
+      position:fixed; inset:0; pointer-events:none; z-index:30;
+    }
+
+    /* Failed shake animation */
+    .shake{
+      animation: shake .6s ease both;
+    }
+    @keyframes shake{
+      10%, 90% { transform: translateX(-1px) }
+      20%, 80% { transform: translateX(2px) }
+      30%, 50%, 70% { transform: translateX(-3px) }
+      40%, 60% { transform: translateX(3px) }
+    }
+
+    /* Footer note */
+    .footer{
+      text-align:center; color:#9aa0a6; font-size:12px; margin-top:14px;
+    }
+    .sr-only{
+      position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="confetti"></canvas>
+
+  <header class="header" aria-label="Brand header">
+    <div class="logo" aria-hidden="true"></div>
+    <div>
+      <div class="brand">Marion Snacks</div>
+      <div class="subbrand">Sweet moments, simple payments</div>
+    </div>
+  </header>
+
+  <main class="wrap" id="app" role="main" aria-live="polite">
+    <!-- Success Card -->
+    <section class="card" id="successCard" hidden aria-labelledby="successTitle">
+      <div class="snacks" aria-hidden="true">
+        <div class="chip">🥔</div>
+        <div class="cookie">🍪</div>
+        <div class="drink">🧃</div>
+      </div>
+      <div class="hero">
+        <div class="badge success" aria-hidden="true">✔️</div>
+        <div>
+          <h1 class="title" id="successTitle">Payment successful!</h1>
+          <p class="desc" id="successDesc">Thank you for choosing Marion Snacks—your order is on its way.</p>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="grid" id="successDetails">
+          <div class="item">
+            <div class="label">Transaction ID</div>
+            <div class="value" id="txIdSuccess">TX-000000</div>
+          </div>
+          <div class="item">
+            <div class="label">Amount paid</div>
+            <div class="value" id="amountSuccess">UGX 0</div>
+          </div>
+          <div class="item">
+            <div class="label">Payment method</div>
+            <div class="value" id="methodSuccess">—</div>
+          </div>
+          <div class="item">
+            <div class="label">Items</div>
+            <div class="value" id="itemsSuccess">—</div>
+          </div>
+        </div>
+
+        <div class="ctas">
+          <button class="btn primary" id="trackBtn">Track order</button>
+          <button class="btn secondary" id="shopBtn">Continue shopping</button>
+          <button class="btn ghost" id="shareBtn">Share receipt</button>
+        </div>
+
+        <p class="hint">Tip: You can save the receipt by sharing or taking a screenshot.</p>
+      </div>
+    </section>
+
+    <!-- Failed Card -->
+    <section class="card" id="failedCard" hidden aria-labelledby="failedTitle">
+      <div class="snacks" aria-hidden="true">
+        <div class="chip">🥔</div>
+        <div class="cookie">🍪</div>
+        <div class="drink">🧃</div>
+      </div>
+      <div class="hero">
+        <div class="badge failed shake" aria-hidden="true">✖️</div>
+        <div>
+          <h1 class="title" id="failedTitle">Payment failed</h1>
+          <p class="desc" id="failedDesc">Oops—something went wrong. Let’s try again.</p>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="grid" id="failedDetails">
+          <div class="item">
+            <div class="label">Transaction ID</div>
+            <div class="value" id="txIdFail">TX-000000</div>
+          </div>
+          <div class="item">
+            <div class="label">Attempted amount</div>
+            <div class="value" id="amountFail">UGX 0</div>
+          </div>
+          <div class="item">
+            <div class="label">Payment method</div>
+            <div class="value" id="methodFail">—</div>
+          </div>
+          <div class="item">
+            <div class="label">Reason</div>
+            <div class="value" id="errorFail">Unknown error</div>
+          </div>
+        </div>
+
+        <div class="ctas">
+          <button class="btn danger" id="retryBtn">Try again</button>
+          <button class="btn ghost" id="changeMethodBtn">Change payment method</button>
+          <button class="btn secondary" id="supportBtn">Get help</button>
+        </div>
+
+        <p class="hint">Common fixes: check your balance, network connection, or use a different payment option.</p>
+      </div>
+    </section>
+
+    <p class="footer">© Marion Snacks · Powered with love</p>
+  </main>
+
+  <script>
+    // Helper: parse query params
+    function getParams(){
+      const p = new URLSearchParams(window.location.search);
+      return {
+        status: (p.get("status") || "success").toLowerCase(),
+        txId: p.get("txId") || "TX-" + Math.floor(100000 + Math.random()*900000),
+        amount: p.get("amount") || "UGX 12,000",
+        method: p.get("method") || "Mobile Money",
+        items: p.get("items") || "Cookie Box x1, Juice Pack x2",
+        error: p.get("error") || "Network timeout"
+      };
+    }
+
+    // Confetti
+    const confettiCanvas = document.getElementById("confetti");
+    const ctx = confettiCanvas.getContext("2d");
+    let confettiPieces = [], confettiActive = false, confettiTimer;
+
+    function resizeCanvas(){
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeCanvas);
+    resizeCanvas();
+
+    function spawnConfetti(){
+      const colors = ["#1f8a4e","#46c37b","#ff8a00","#ffd166","#5ec8ff"];
+      confettiPieces = [];
+      for(let i=0;i<120;i++){
+        confettiPieces.push({
+          x: Math.random()*confettiCanvas.width,
+          y: -Math.random()*100,
+          r: 3 + Math.random()*4,
+          color: colors[Math.floor(Math.random()*colors.length)],
+          vy: 2 + Math.random()*3,
+          vx: -1 + Math.random()*2,
+          a: 0.8 + Math.random()*0.2
+        });
+      }
+      confettiActive = true;
+      cancelAnimationFrame(confettiTimer);
+      animateConfetti();
+      setTimeout(stopConfetti, 2800);
+    }
+    function animateConfetti(){
+      ctx.clearRect(0,0,confettiCanvas.width, confettiCanvas.height);
+      for(const p of confettiPieces){
+        p.vx += (Math.random()-0.5)*0.1;
+        p.vy += 0.01;
+        p.x += p.vx;
+        p.y += p.vy;
+        if(p.y > confettiCanvas.height + 10) p.y = -10;
+        ctx.globalAlpha = p.a;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fill();
+      }
+      if(confettiActive) confettiTimer = requestAnimationFrame(animateConfetti);
+    }
+    function stopConfetti(){
+      confettiActive = false;
+      ctx.clearRect(0,0,confettiCanvas.width, confettiCanvas.height);
+    }
+
+    // Populate UI
+    function init(){
+      const p = getParams();
+
+      const successCard = document.getElementById("successCard");
+      const failedCard  = document.getElementById("failedCard");
+
+      // Fill data
+      document.getElementById("txIdSuccess").textContent = p.txId;
+      document.getElementById("amountSuccess").textContent = p.amount;
+      document.getElementById("methodSuccess").textContent = p.method;
+      document.getElementById("itemsSuccess").textContent = p.items;
+
+      document.getElementById("txIdFail").textContent = p.txId;
+      document.getElementById("amountFail").textContent = p.amount;
+      document.getElementById("methodFail").textContent = p.method;
+      document.getElementById("errorFail").textContent = p.error;
+
+      // Toggle state
+      const isSuccess = p.status === "success" || p.status === "ok";
+      successCard.hidden = !isSuccess;
+      failedCard.hidden = isSuccess;
+
+      // Confetti on success
+      if(isSuccess) spawnConfetti();
+
+      // Actions
+      document.getElementById("trackBtn").onclick = () => {
+        const url = new URL(window.location.href);
+        url.pathname = "/orders/track"; // change to your real route
+        url.search = "?txId=" + encodeURIComponent(p.txId);
+        window.location.href = url.toString();
+      };
+      document.getElementById("shopBtn").onclick = () => {
+        window.location.href = "/shop"; // change to your real route
+      };
+      document.getElementById("shareBtn").onclick = async () => {
+        const text = `Marion Snacks Receipt
+Status: Success
+Transaction: ${p.txId}
+Amount: ${p.amount}
+Method: ${p.method}
+Items: ${p.items}`;
+        try{
+          if(navigator.share){
+            await navigator.share({ title:"Marion Snacks Receipt", text });
+          }else{
+            await navigator.clipboard.writeText(text);
+            alert("Receipt copied to clipboard!");
+          }
+        }catch(e){
+          alert("Could not share. Copied to clipboard instead.");
+          try{ await navigator.clipboard.writeText(text); }catch{}
+        }
+      };
+
+      document.getElementById("retryBtn").onclick = () => {
+        // Simulate retry by reloading with success (adjust to actual retry flow)
+        const url = new URL(window.location.href);
+        url.searchParams.set("status","success");
+        window.location.href = url.toString();
+      };
+      document.getElementById("changeMethodBtn").onclick = () => {
+        window.location.href = "/checkout?step=payment"; // adjust route
+      };
+      document.getElementById("supportBtn").onclick = () => {
+        window.location.href = "/support"; // adjust route
+      };
+    }
+
+    // Initialize
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>
