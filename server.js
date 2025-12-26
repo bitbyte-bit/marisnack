@@ -604,7 +604,7 @@ app.post('/api/payments/marzpay/initiate', async (req, res) => {
         // MarzPay API credentials from environment variables
         const MARZPAY_API_KEY = process.env.MARZPAY_API_KEY || 'marz_zuCBBQnpFcokbH2a';
         const MARZPAY_API_SECRET = process.env.MARZPAY_API_SECRET || 'bsX7IbrHcTEWnG5wYeU5brAkr46CxRwt';
-        const MARZPAY_BASE_URL = process.env.MARZPAY_BASE_URL || 'bWFyel96dUNCQlFucEZjb2tiSDJhOmJzWDdJYnJIY1RFV25HNXdZZVU1YnJBa3I0NkN4Und0';
+        const MARZPAY_BASE_URL = process.env.MARZPAY_BASE_URL || 'https://wallet.wearemarz.com/api/v1';
 
         // Create authorization header (Base64 encoded API Key:Secret)
         const authString = Buffer.from(`${MARZPAY_API_KEY}:${MARZPAY_API_SECRET}`).toString('base64');
@@ -754,7 +754,7 @@ app.get('/api/payments/marzpay/status/:paymentIntentId', async (req, res) => {
 
         const MARZPAY_API_KEY = process.env.MARZPAY_API_KEY || 'marz_zuCBBQnpFcokbH2a';
         const MARZPAY_API_SECRET = process.env.MARZPAY_API_SECRET || 'bsX7IbrHcTEWnG5wYeU5brAkr46CxRwt';
-        const MARZPAY_BASE_URL = process.env.MARZPAY_BASE_URL || 'https://api.marzpay.com';
+        const MARZPAY_BASE_URL = process.env.MARZPAY_BASE_URL || 'https://wallet.wearemarz.com/api/v1';
 
         const authString = Buffer.from(`${MARZPAY_API_KEY}:${MARZPAY_API_SECRET}`).toString('base64');
 
@@ -1178,4 +1178,5 @@ io.on('connection', (socket) => {
 // Start server
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT} with Socket.IO`);
+
 });
